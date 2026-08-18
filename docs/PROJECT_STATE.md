@@ -1,10 +1,22 @@
 # KeepMeter — Project State
 
 Last updated: 2026-08-18
-Status: ACTIVE — POLISHED MVP BUILD GREEN
+Status: ACTIVE — POLISHED MVP + QA HARDENING GREEN
 Repository: `acciento89-bot/keepmeter`
 Default branch: `main`
-Current verified checkpoint: `45c53308ae41fc38eec5049c0181d4b0d7ede42b`
+Current verified checkpoint: `0ec1e7b87fb3148462fcdc923770684e9bf67f1f`
+
+## Handoff rule
+
+This file is the authoritative and sufficient ongoing project state for KeepMeter.
+
+For future KeepMeter work:
+
+1. Read this file first.
+2. Inspect current `main` / open PR / CI state.
+3. Continue from the recorded next steps.
+4. Update this file after each major pass.
+5. Do **not** require a parallel update in the external App Factory master repository for normal KeepMeter development.
 
 ## Product thesis
 
@@ -70,6 +82,16 @@ Core loop:
 - Lifetime Pro: unlimited active purchases.
 - Purchase and restore plumbing compile.
 - No subscription in v1.
+- Lifetime purchase flow now loads a missing StoreKit product and continues the purchase on the same tap rather than silently requiring a second tap.
+- Purchase/restore operations clear stale errors and expose loading state consistently.
+- Missing Lifetime product now surfaces a user-visible localized error.
+
+### Notifications / localization hardening
+
+- Dynamic notification bodies now use stable localization format keys instead of interpolated localization keys.
+- DE/EN reminder copy supports purchase name interpolation and days remaining.
+- Reminder title also uses an explicit stable localization key.
+- This fixes the previous case where a runtime item name could prevent a localized string lookup.
 
 ### Visual system — first polish pass complete
 
@@ -99,20 +121,25 @@ The styling uses system-aware backgrounds/materials and semantic colors so it is
 
 ### Gate 1 — functional MVP
 
-- Validation PR: #1 `Validate current KeepMeter MVP build`.
+- PR: #1 `Validate current KeepMeter MVP build`.
 - Workflow run: `32178808223`.
 - Result: SUCCESS.
 - Merge checkpoint: `bf024336455d2a65da1e7d5f25ac87f142a3de8d`.
 
 ### Gate 2 — visual polish
 
-- Branch: `agent/visual-polish-v1`.
 - PR: #2 `Polish KeepMeter MVP visual system`.
-- 11 changed files, ~1,200 additions during the pass.
 - Workflow run: `32179763750`.
 - Full iOS Simulator `xcodebuild`: SUCCESS.
-- PR #2 squash-merged.
-- Current merge checkpoint: `45c53308ae41fc38eec5049c0181d4b0d7ede42b`.
+- Merge checkpoint: `45c53308ae41fc38eec5049c0181d4b0d7ede42b`.
+
+### Gate 3 — StoreKit / notification hardening
+
+- PR: #3 `Harden StoreKit and reminder localization`.
+- Workflow run: `32182015862`.
+- Full iOS Simulator `xcodebuild`: SUCCESS.
+- PR #3 squash-merged.
+- Current merge checkpoint: `0ec1e7b87fb3148462fcdc923770684e9bf67f1f`.
 
 Future major source passes must continue to use CI as a regression gate before merge/TestFlight.
 
@@ -144,24 +171,24 @@ The UI explains the reason. Cost per use is displayed, but no universal monetary
 
 - Functional CI simulator build: GREEN.
 - Visual-polish CI simulator build: GREEN.
+- StoreKit/notification hardening CI simulator build: GREEN.
 - No physical-device QA yet.
 - Persistence/relaunch behavior has not yet been explicitly exercised.
-- Notification permission/delivery behavior has not yet been explicitly exercised.
-- StoreKit local/sandbox purchase flow has not yet been exercised.
+- Notification permission/delivery behavior has not yet been explicitly exercised on device.
+- StoreKit local/sandbox purchase flow has not yet been exercised end-to-end.
 - No TestFlight build uploaded yet.
 - No App Store submission yet.
 
 ## Still open for MVP
 
-- Visual identity / final app icon.
-- Dedicated light/dark appearance QA and fixes.
-- Dynamic notification strings: full DE/EN formatting cleanup.
 - StoreKit local `.storekit` test configuration.
 - Create/configure Lifetime IAP in App Store Connect.
 - Persistence/relaunch QA.
 - Notification permission/behavior QA.
 - Free-limit / purchase / restore QA.
+- Dedicated light/dark appearance QA and fixes.
 - Accessibility pass.
+- Visual identity / final app icon.
 - Final-enough name/domain/trademark due diligence before public branding.
 - First TestFlight readiness pass and signed archive/upload.
 
@@ -173,13 +200,10 @@ Status: PROVISIONAL. Preliminary market checks did not reveal an obvious exact-n
 
 ## Immediate next steps
 
-1. Add local StoreKit test configuration and exercise free -> Lifetime Pro -> restore behavior.
-2. QA persistence/relaunch and notification scheduling/delivery.
-3. Run dedicated light/dark and accessibility passes on the polished UI.
-4. Establish final icon/visual identity once naming is strong enough to keep.
-5. Perform stronger name/domain/trademark due diligence before App Store branding is locked.
-6. Prepare first signed TestFlight build only after these QA gates are green.
-
-## Cross-project handoff
-
-The master App Factory status lives in `acciento89-bot/appideenchatgpt/docs/APP_FACTORY_STATE.md` and must be updated after every major KeepMeter pass.
+1. Add local StoreKit testing support and exercise free -> Lifetime Pro -> restore behavior.
+2. Add better in-app visibility/control for notification authorization, then exercise scheduling/delivery on device.
+3. QA persistence/relaunch and the full decision loop.
+4. Run dedicated light/dark and accessibility passes on the polished UI.
+5. Establish final icon/visual identity once naming is strong enough to keep.
+6. Perform stronger name/domain/trademark due diligence before App Store branding is locked.
+7. Prepare first signed TestFlight build only after these QA gates are green.
