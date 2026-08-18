@@ -1,12 +1,10 @@
 # KeepMeter — Project State
 
 Last updated: 2026-08-18
-Status: ACTIVE — FIRST GREEN MVP BUILD
+Status: ACTIVE — POLISHED MVP BUILD GREEN
 Repository: `acciento89-bot/keepmeter`
 Default branch: `main`
-Current verified checkpoint: `bf024336455d2a65da1e7d5f25ac87f142a3de8d`
-Validation PR: `#1 Validate current KeepMeter MVP build` — merged
-Validated workflow run: `32178808223` — SUCCESS
+Current verified checkpoint: `45c53308ae41fc38eec5049c0181d4b0d7ede42b`
 
 ## Product thesis
 
@@ -44,93 +42,93 @@ Core loop:
 - iOS 17+
 - GitHub Actions iOS Simulator build validation
 
-## Current implementation
+## Implemented and compiling
 
-### Implemented and compiling
+### Core product
 
-- Native `KeepMeter.xcodeproj`.
-- Shared Xcode scheme.
-- Generated Info.plist configuration through build settings.
-- Provisional bundle ID: `de.kamilunavo.keepmeter`.
-- App version scaffold: `0.1.0 (1)`.
-- `Purchase` SwiftData model.
-- `UsageEvent` SwiftData model.
+- Native `KeepMeter.xcodeproj` and shared scheme.
+- Provisional bundle ID `de.kamilunavo.keepmeter`.
+- Version scaffold `0.1.0 (1)`.
+- SwiftData `Purchase` and `UsageEvent` models.
 - Active / kept / returned outcomes.
-- Cost-per-use calculation.
-- Return-window remaining-days calculation.
-- Return-window elapsed-ratio calculation.
-- Deterministic `DecisionEngine` with KEEP / REVIEW / RETURN? signals.
-- Decision reasons shown to the user; recommendation is not opaque AI.
-- Home / Decision Dashboard.
-- Add Purchase flow.
-- Purchase Detail screen.
+- Cost-per-use and return-window calculations.
+- Deterministic, explainable KEEP / REVIEW / RETURN? engine.
+- Dashboard, Add Purchase, Purchase Detail and Archive.
 - One-tap usage logging.
-- Archive screen.
-- Mark purchase as kept or returned.
 - Local return reminders at 3 days, 1 day and deadline day when applicable.
-- Notification cancellation when a purchase is completed.
+- Reminder cancellation when a purchase is completed.
+- 3-page onboarding.
+- Main tabs: Active / Insights / Archive / Settings.
+- Insights with tracked value, total uses, average cost/use, open decisions, kept/returned counts and best-value item.
+
+### Monetization
+
 - StoreKit 2 entitlement service.
-- Lifetime Pro purchase / restore plumbing.
-- Free-tier cap of 5 active purchases.
-- Lifetime Pro paywall when the cap is reached.
-- 3-page first-launch onboarding.
-- Main tab shell: Active / Insights / Archive / Settings.
-- Insights dashboard with tracked value, total uses, average cost/use, open decisions, kept/returned counts and best-value item.
-- Settings / Pro management entry.
-- Local-first privacy explanation in Settings.
-- Onboarding can be shown again from Settings.
-- English localization resource.
-- German localization resource.
-- `Combine` import fix for `EntitlementStore` state publishing.
-- GitHub Actions workflow at `.github/workflows/ios-build.yml` for an unsigned iOS Simulator build.
-
-## Verified build milestone
-
-The first real CI compile is confirmed green.
-
-Validation method:
-
-1. Created branch `agent/ci-validation` from the current `main` implementation.
-2. Opened PR #1 so the existing `pull_request` workflow could be observed through the connected GitHub interface.
-3. GitHub Actions run `32178808223` executed job `build`.
-4. `xcodebuild` compiled `KeepMeter.xcodeproj` / scheme `KeepMeter` for generic iOS Simulator with code signing disabled.
-5. All workflow steps completed successfully.
-6. PR #1 was squash-merged.
-7. Resulting merge commit: `bf024336455d2a65da1e7d5f25ac87f142a3de8d`.
-
-This is the first objective green-build gate for App Factory #001.
-
-## Monetization implementation
-
-Current code product ID:
-
-`de.kamilunavo.keepmeter.pro.lifetime`
-
-Current behavior:
-
-- Free: maximum 5 active tracked purchases.
-- Archived / completed purchases do not count against the active cap.
-- Pro: unlimited active purchases.
-- Pro purchase model: one-time Lifetime unlock.
+- Current product ID: `de.kamilunavo.keepmeter.pro.lifetime`.
+- Free tier: maximum 5 active purchases.
+- Completed purchases do not count against the active cap.
+- Lifetime Pro: unlimited active purchases.
+- Purchase and restore plumbing compile.
 - No subscription in v1.
 
-The StoreKit code compiles, but the matching In-App Purchase still needs local StoreKit test configuration and App Store Connect creation/configuration before real purchase testing.
+### Visual system — first polish pass complete
+
+PR #2 applied the first coherent KeepMeter visual language across the complete MVP surface:
+
+- adaptive branded app background
+- primary KeepMeter blue accent plus semantic success/warning/return colors
+- reusable material-card treatment with restrained borders/shadows
+- redesigned first-launch onboarding
+- redesigned decision dashboard and purchase cards
+- visible return-window progress on active purchases
+- clearer metric hierarchy for uses, cost/use and days remaining
+- redesigned purchase-detail decision hero
+- prominent one-tap usage action
+- redesigned final keep/return decision area
+- polished Insights dashboard
+- polished Archive
+- polished Add Purchase flow
+- polished Settings / Pro status card
+- Lifetime-first Pro paywall emphasizing one-time purchase / no subscription
+- dashboard success haptic after logging a use
+- additional DE/EN visual-copy localization
+
+The styling uses system-aware backgrounds/materials and semantic colors so it is structurally compatible with light and dark appearance. A dedicated manual light/dark QA pass is still open.
+
+## Verified build gates
+
+### Gate 1 — functional MVP
+
+- Validation PR: #1 `Validate current KeepMeter MVP build`.
+- Workflow run: `32178808223`.
+- Result: SUCCESS.
+- Merge checkpoint: `bf024336455d2a65da1e7d5f25ac87f142a3de8d`.
+
+### Gate 2 — visual polish
+
+- Branch: `agent/visual-polish-v1`.
+- PR: #2 `Polish KeepMeter MVP visual system`.
+- 11 changed files, ~1,200 additions during the pass.
+- Workflow run: `32179763750`.
+- Full iOS Simulator `xcodebuild`: SUCCESS.
+- PR #2 squash-merged.
+- Current merge checkpoint: `45c53308ae41fc38eec5049c0181d4b0d7ede42b`.
+
+Future major source passes must continue to use CI as a regression gate before merge/TestFlight.
 
 ## Decision-engine v1
 
-The recommendation is deliberately transparent and conservative.
+Current conservative prototype rules:
 
-Current rules include:
-
-- deadline already passed -> REVIEW
-- zero uses with <= 3 days left -> RETURN?
-- <= 1 use with <= 3 days left -> REVIEW
+- deadline passed -> REVIEW
+- zero uses and <= 3 days remaining -> RETURN?
+- <= 1 use and <= 3 days remaining -> REVIEW
 - zero uses after >= 60% of the return window -> REVIEW
 - >= 3 logged uses -> KEEP signal
 - early in the return window -> REVIEW / keep collecting signal
 - otherwise -> REVIEW / more signal needed
 
-Cost per use is displayed continuously. The current engine does not pretend that a universal monetary threshold determines personal value.
+The UI explains the reason. Cost per use is displayed, but no universal monetary threshold pretends to define personal value.
 
 ## Guardrails
 
@@ -142,29 +140,27 @@ Cost per use is displayed continuously. The current engine does not pretend that
 - No opaque AI recommendation.
 - No claim that a user-entered return date is a guaranteed legal right; merchant policy/statutory rights may differ.
 
-## Current build / QA status
+## Build / QA status
 
-- First CI iOS Simulator build: GREEN.
-- PR validation path confirmed usable for future compile checks.
-- Source currently compiles with Onboarding, Insights, Settings and StoreKit plumbing included.
+- Functional CI simulator build: GREEN.
+- Visual-polish CI simulator build: GREEN.
 - No physical-device QA yet.
 - Persistence/relaunch behavior has not yet been explicitly exercised.
 - Notification permission/delivery behavior has not yet been explicitly exercised.
-- StoreKit sandbox/local product flow has not yet been exercised.
+- StoreKit local/sandbox purchase flow has not yet been exercised.
 - No TestFlight build uploaded yet.
 - No App Store submission yet.
 
 ## Still open for MVP
 
-- First high-polish visual system across Dashboard / Detail / Insights / Settings.
-- Visual identity and app icon.
+- Visual identity / final app icon.
+- Dedicated light/dark appearance QA and fixes.
 - Dynamic notification strings: full DE/EN formatting cleanup.
 - StoreKit local `.storekit` test configuration.
 - Create/configure Lifetime IAP in App Store Connect.
 - Persistence/relaunch QA.
 - Notification permission/behavior QA.
 - Free-limit / purchase / restore QA.
-- Light/dark-mode polish.
 - Accessibility pass.
 - Final-enough name/domain/trademark due diligence before public branding.
 - First TestFlight readiness pass and signed archive/upload.
@@ -177,13 +173,12 @@ Status: PROVISIONAL. Preliminary market checks did not reveal an obvious exact-n
 
 ## Immediate next steps
 
-1. Apply the first coherent high-polish visual system while preserving the now-green architecture.
-2. Create an app-icon / visual-identity direction once the UI language is coherent.
-3. Add local StoreKit test configuration and exercise the free-to-Pro path.
-4. QA persistence, reminders and core decision flow.
-5. Complete light/dark and accessibility passes.
-6. Perform stronger name/domain/trademark due diligence before App Store branding is locked.
-7. Prepare first TestFlight build only after the QA gates above are green.
+1. Add local StoreKit test configuration and exercise free -> Lifetime Pro -> restore behavior.
+2. QA persistence/relaunch and notification scheduling/delivery.
+3. Run dedicated light/dark and accessibility passes on the polished UI.
+4. Establish final icon/visual identity once naming is strong enough to keep.
+5. Perform stronger name/domain/trademark due diligence before App Store branding is locked.
+6. Prepare first signed TestFlight build only after these QA gates are green.
 
 ## Cross-project handoff
 
