@@ -1,9 +1,14 @@
 import SwiftUI
+import UserNotifications
+import UIKit
 
 struct SettingsView: View {
     @EnvironmentObject private var entitlementStore: EntitlementStore
+    @Environment(\.scenePhase) private var scenePhase
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = true
+
     @State private var showingPaywall = false
+    @State private var notificationStatus: UNAuthorizationStatus = .notDetermined
 
     private var versionText: String {
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—"
@@ -34,6 +39,56 @@ struct SettingsView: View {
                         }
                     } header: {
                         Text(String(localized: "Pro"))
+                    }
+
+                    Section(String(localized: "Reminders")) {
+                        HStack(spacing: 12) {
+                            Label {
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(String(localized: "Notification permission"))
+                                        .foregroundStyle(.primary)
+                                    Text(notificationStatusDetail)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            } icon: {
+                                Image(systemName: notificationStatusIcon)
+                                    .foregroundStyle(notificationStatusTint)
+                            }
+
+                            Spacer(minLength: 8)
+
+                            Text(notificationStatusLabel)
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(notificationStatusTint)
+                        }
+
+                        switch notificationStatus {
+                        case .notDetermined:
+                            Button {
+                                Task {
+                                    _ = await NotificationManager.requestAuthorization()
+                                    await refreshNotificationStatus()
+                                }
+                            } label: {
+                                Label(String(localized: "Enable reminders"), systemImage: "bell.badge")
+                            }
+
+                        case .denied:
+                            Button {
+                                openSystemSettings()
+                            } label: {
+                                Label(String(localized: "Open iOS Settings"), systemImage: "gear")
+                            }
+
+                        case .authorized, .provisional, .ephemeral:
+                            Label(String(localized: "Return reminders are available on this device."), systemImage: "checkmark.circle")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+
+                        @unknown default:
+                            EmptyView()
+                        }
                     }
 
                     Section(String(localized: "Privacy")) {
@@ -84,6 +139,15 @@ struct SettingsView: View {
             .sheet(isPresented: $showingPaywall) {
                 PaywallView()
                     .tint(KMTheme.accent)
+            }
+            .task {
+                await refreshNotificationStatus()
+            }
+            .onChange(of: scenePhase) { _, newPhase in
+                guard newPhase == .active else { return }
+                Task {
+                    await refreshNotificationStatus()
+                }
             }
         }
     }
@@ -137,5 +201,71 @@ struct SettingsView: View {
         }
         .buttonStyle(.plain)
         .padding(.vertical, 4)
+    }
+
+    private var notificationStatusLabel: String {
+        switch notificationStatus {
+        case .notDetermined:
+            String(localized: "Not asked")
+        case .denied:
+            String(localized: "Off")
+        case .authorized:
+            String(localized: "On")
+        case .provisional:
+            String(localized: "Provisional")
+        case .ephemeral:
+            String(localized: "Temporary")
+        @unknown default:
+            String(localized: "Unknown")
+        }
+    }
+
+    private var notificationStatusDetail: String {
+        switch notificationStatus {
+        case .notDetermined:
+            String(localized: "KeepMeter has not asked for notification permission yet.")
+        case .denied:
+            String(localized: "Notifications are disabled in iOS Settings.")
+        case .authorized, .provisional, .ephemeral:
+            String(localized: "KeepMeter can schedule return-deadline reminders.")
+        @unknown default:
+            String(localized: "Notification status could not be determined.")
+        }
+    }
+
+    private var notificationStatusIcon: String {
+        switch notificationStatus {
+        case .notDetermined:
+            "bell.badge"
+        case .denied:
+            "bell.slash.fill"
+        case .authorized, .provisional, .ephemeral:
+            "bell.fill"
+        @unknown default:
+            "questionmark.circle"
+        }
+    }
+
+    private var notificationStatusTint: Color {
+        switch notificationStatus {
+        case .notDetermined:
+            KMTheme.warning
+        case .denied:
+            KMTheme.danger
+        case .authorized, .provisional, .ephemeral:
+            KMTheme.success
+        @unknown default:
+            .secondary
+        }
+    }
+
+    @MainActor
+    private func refreshNotificationStatus() async {
+        notificationStatus = await NotificationManager.authorizationStatus()
+    }
+
+    private func openSystemSettings() {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+        UIApplication.shared.open(url)
     }
 }
