@@ -1,7 +1,7 @@
 # KeepMeter — App Store Release Checklist
 
 Last updated: 2026-08-18
-Status: PRE-TESTFLIGHT / NOT READY TO SUBMIT
+Status: PRE-TESTFLIGHT / APPICON COMPLETE / RUNTIME + APP STORE CONNECT OPEN
 
 This file tracks App Store-facing release requirements. `docs/PROJECT_STATE.md` remains the authoritative overall project handoff.
 
@@ -18,19 +18,23 @@ This file tracks App Store-facing release requirements. `docs/PROJECT_STATE.md` 
 - Monetization: one-time non-consumable Lifetime Pro; no subscription in v1
 - Free limit: 5 active purchases
 
-## Public branding
+## Public branding / release assets
 
-- Working app name: `KeepMeter`
-- Name status: PROVISIONAL — do not treat as legally cleared yet
-- Final AppIcon: MISSING
-- `Assets.xcassets/AppIcon.appiconset`: MISSING
-- Public branding must not be locked until name/domain/trademark due diligence is sufficiently complete.
+- Working/public v1 app name: `KeepMeter`
+- Name status: operationally locked for v1; not claimed as legally trademark-cleared
+- Final AppIcon: DONE
+- `KeepMeter/Assets.xcassets/AppIcon.appiconset`: DONE
+- Master PNG: 1024×1024, opaque/no alpha
+- Asset catalog connected to Xcode Resources: DONE
+- `ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon`: Debug + Release
+- CI hard-checks AppIcon presence, metadata, dimensions and opacity
+- Xcode Debug + Release asset compilation: GREEN in Gate 11 / workflow `32189137123`
 
 ## App Store Connect blockers
 
-- [ ] Lock public app name.
-- [ ] Add final AppIcon asset catalog and connect it to the target.
-- [ ] Create the app record with the final public name / bundle ID.
+- [x] Lock operational v1 public app name / visual direction.
+- [x] Add final AppIcon asset catalog and connect it to the target.
+- [ ] Create/verify the App Store Connect app record with public name / bundle ID.
 - [ ] Create the non-consumable Lifetime IAP with product ID `de.kamilunavo.keepmeter.pro.lifetime`.
 - [ ] Choose final App Store price for Lifetime Pro; local StoreKit price 9.99 is test metadata only.
 - [ ] Add IAP display name/description/localizations and review screenshot as required in App Store Connect.
@@ -124,7 +128,7 @@ purchase,return,deadline,shopping,cost,usage,decision,tracker,keep,returns
 
 ## Screenshot capture plan
 
-Do not capture final store screenshots until the visual identity and AppIcon are locked and the runtime pass is green.
+Brand/AppIcon is now locked. Final store screenshots should still wait until runtime Light/Dark and release-candidate QA are green.
 
 Suggested sequence:
 
@@ -153,6 +157,16 @@ Screenshots must use non-sensitive demo data and should be captured separately f
 - [ ] VoiceOver navigation pass.
 - [ ] Signed Release archive succeeds.
 
+## Current automated release evidence
+
+Gate 11 — PR #11 — workflow `32189137123` — merge `cedc90a883713683217f663485a6d8f2e09fd63a`:
+
+- StoreKit configuration validation: GREEN
+- Release preflight including final AppIcon hard gate: GREEN
+- file-backed SwiftData reopen: GREEN
+- Debug iOS Simulator build including asset compilation: GREEN
+- Release iOS Simulator build including asset compilation: GREEN
+
 ## Release rule
 
-A green Debug/Release simulator CI build is necessary but not sufficient for TestFlight/App Store readiness. Do not mark the app release-ready until the final AppIcon/branding, App Store Connect IAP, signed archive and runtime device gates above are complete.
+A green Debug/Release simulator CI build is necessary but not sufficient for TestFlight/App Store readiness. Do not mark the app release-ready until the App Store Connect IAP, signed archive and runtime device gates above are complete.
