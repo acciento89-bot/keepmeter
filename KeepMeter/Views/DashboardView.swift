@@ -9,6 +9,7 @@ struct DashboardView: View {
 
     @State private var showingAddPurchase = false
     @State private var showingPaywall = false
+    @State private var dataErrorMessage: String?
 
     private let freeActivePurchaseLimit = 5
 
@@ -71,6 +72,19 @@ struct DashboardView: View {
             .sheet(isPresented: $showingPaywall) {
                 PaywallView()
                     .tint(KMTheme.accent)
+            }
+            .alert(
+                String(localized: "Couldn't save change"),
+                isPresented: Binding(
+                    get: { dataErrorMessage != nil },
+                    set: { if !$0 { dataErrorMessage = nil } }
+                )
+            ) {
+                Button(String(localized: "Close"), role: .cancel) {
+                    dataErrorMessage = nil
+                }
+            } message: {
+                Text(dataErrorMessage ?? "")
             }
         }
     }
@@ -218,10 +232,16 @@ struct DashboardView: View {
         let event = UsageEvent()
         modelContext.insert(event)
         purchase.usageEvents.append(event)
-        try? modelContext.save()
 
-        let generator = UINotificationFeedbackGenerator()
-        generator.notificationOccurred(.success)
+        do {
+            try modelContext.save()
+
+            let generator = UINotificationFeedbackGenerator()
+            generator.notificationOccurred(.success)
+        } catch {
+            modelContext.rollback()
+            dataErrorMessage = String(localized: "Your change couldn't be saved. Please try again.")
+        }
     }
 }
 

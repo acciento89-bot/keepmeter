@@ -119,3 +119,5 @@
 "Notification status could not be determined." = "Notification status could not be determined.";
 "dashboard.urgentCount" = "%ld purchase(s) need attention within three days.";
 "The purchase could not be saved. Please try again." = "The purchase could not be saved. Please try again.";
+"Couldn't save change" = "Couldn't save change";
+"Your change couldn't be saved. Please try again." = "Your change couldn't be saved. Please try again.";
