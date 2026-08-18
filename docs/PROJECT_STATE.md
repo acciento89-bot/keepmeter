@@ -1,10 +1,10 @@
 # KeepMeter — Project State
 
 Last updated: 2026-08-18
-Status: ACTIVE — POLISHED MVP + PERSISTENCE GATE GREEN
+Status: ACTIVE — PERSISTENCE + RELEASE BUILD GATES GREEN
 Repository: `acciento89-bot/keepmeter`
 Default branch: `main`
-Current verified checkpoint: `2b93368f084ccf4808a0fa2a5e68c5d7dc51bc0c`
+Current verified checkpoint: `dad79a620f375ed2c5eaa9ce4d40784130aab164`
 
 ## Handoff rule
 
@@ -81,7 +81,7 @@ Core loop: **Bought -> Use -> Measure -> Decide before deadline.**
 - `ci/PersistenceSmoke.swift` uses the real `Purchase` and `UsageEvent` models with a file-backed SwiftData store.
 - CI writes a purchase, usage relationship and archived outcome, destroys the first container, reopens the same store, then verifies IDs, fields, dates, relationship, outcome and derived cost-per-use.
 
-Important: executable file-backed persistence reopen is now CI-green. A physical iPhone terminate/relaunch session remains a separate runtime QA gate and must not be claimed as completed yet.
+Important: executable file-backed persistence reopen is CI-green. A physical iPhone terminate/relaunch session remains a separate runtime QA gate and must not be claimed as completed yet.
 
 ### Monetization / local StoreKit testing
 
@@ -122,6 +122,13 @@ Important: local StoreKit is structurally/compile validated, but the interactive
 - Runtime-count localization in the dashboard uses a stable format key.
 
 A real-device VoiceOver and visual light/dark inspection is still open; do not claim runtime accessibility QA is complete yet.
+
+### Release build validation
+
+- CI now compiles both Debug and Release configurations for the generic iOS Simulator.
+- Release compilation validates code paths with DEBUG-only QA UI excluded.
+- StoreKit configuration validation and SwiftData persistence reopen run before both app builds.
+- Release simulator compilation is not a signed Archive and does not replace the first real TestFlight archive/upload gate.
 
 ## Verified build gates
 
@@ -170,6 +177,15 @@ A real-device VoiceOver and visual light/dark inspection is still open; do not c
 - Full iOS Simulator Debug build: SUCCESS
 - Merge `2b93368f084ccf4808a0fa2a5e68c5d7dc51bc0c`
 
+### Gate 8 — Release configuration compile
+- PR #8 `Add Release configuration build gate`
+- Workflow `32186439191`
+- StoreKit validation: SUCCESS
+- SwiftData persistence reopen: SUCCESS
+- Full iOS Simulator Debug build: SUCCESS
+- Full iOS Simulator Release build: SUCCESS
+- Merge `dad79a620f375ed2c5eaa9ce4d40784130aab164`
+
 Major source passes must remain CI-green before merge/TestFlight.
 
 ## DecisionEngine v1
@@ -205,6 +221,8 @@ GREEN / STRUCTURALLY VALIDATED:
 - data-integrity + Dynamic Type/accessibility source hardening compile
 - file-backed SwiftData persistence write/reopen verification
 - mutation save failures rollback instead of silently succeeding
+- full Debug simulator compilation
+- full Release simulator compilation
 
 Still not explicitly exercised end-to-end:
 - physical-device QA
@@ -219,6 +237,7 @@ Release:
 - no TestFlight build yet
 - no App Store submission yet
 - matching Lifetime IAP still needs App Store Connect configuration before sandbox/TestFlight purchase testing
+- signed Archive/export/upload has not yet been exercised
 
 ## Naming
 
@@ -228,7 +247,7 @@ A stronger web exact-name check on 2026-08-18 did not surface an obvious exact c
 
 ## Still open for MVP
 
-1. Add a Release-configuration simulator build gate so TestFlight-only compilation paths are validated.
+1. Audit and close App Store release asset/metadata blockers, especially final app icon and target configuration.
 2. Exercise local StoreKit purchase and restore interactively in Xcode/Simulator.
 3. Create/configure matching Lifetime IAP in App Store Connect.
 4. Physical terminate/relaunch persistence QA.
@@ -238,11 +257,11 @@ A stronger web exact-name check on 2026-08-18 did not surface an obvious exact c
 8. VoiceOver runtime QA.
 9. Final visual identity / app icon.
 10. Formal-enough EUIPO/DPMA/domain due diligence before public branding.
-11. First TestFlight readiness pass and signed archive/upload.
+11. First signed TestFlight archive/upload.
 
 ## Immediate next steps
 
-1. Add and CI-gate a Release-configuration iOS Simulator build in addition to Debug.
+1. Audit current Release output and Xcode target for AppIcon/Info.plist/version/build warnings and missing release assets.
 2. Continue naming/domain/trademark due diligence far enough to lock public branding.
 3. Establish final app icon / visual identity after the name is sufficiently safe.
 4. Configure Lifetime IAP in App Store Connect.
