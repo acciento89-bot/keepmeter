@@ -2,7 +2,8 @@
 set -euo pipefail
 
 settings_file="$(mktemp)"
-trap 'rm -f "$settings_file"' EXIT
+icon_info_file="$(mktemp)"
+trap 'rm -f "$settings_file" "$icon_info_file"' EXIT
 
 xcodebuild \
   -project KeepMeter.xcodeproj \
@@ -39,6 +40,7 @@ assert_setting IPHONEOS_DEPLOYMENT_TARGET 17.0
 assert_setting TARGETED_DEVICE_FAMILY 1
 assert_setting INFOPLIST_KEY_CFBundleDisplayName KeepMeter
 assert_setting INFOPLIST_KEY_LSApplicationCategoryType public.app-category.utilities
+assert_setting ASSETCATALOG_COMPILER_APPICON_NAME AppIcon
 
 marketing_version="$(setting_value MARKETING_VERSION)"
 build_number="$(setting_value CURRENT_PROJECT_VERSION)"
@@ -53,13 +55,33 @@ if [[ ! "$build_number" =~ ^[1-9][0-9]*$ ]]; then
   exit 1
 fi
 
-app_icon_name="$(setting_value ASSETCATALOG_COMPILER_APPICON_NAME)"
-app_icon_dir="KeepMeter/Assets.xcassets/AppIcon.appiconset"
+asset_catalog="KeepMeter/Assets.xcassets"
+app_icon_dir="$asset_catalog/AppIcon.appiconset"
+app_icon_json="$app_icon_dir/Contents.json"
+app_icon_png="$app_icon_dir/AppIcon.png"
 
-if [[ -n "$app_icon_name" && -d "$app_icon_dir" && -f "$app_icon_dir/Contents.json" ]]; then
-  echo "✓ App icon asset catalog configured: $app_icon_name"
-else
-  echo "::warning title=Release asset blocker::Final AppIcon asset catalog is not configured yet. Signed TestFlight/App Store readiness remains blocked until branding is locked and the AppIcon set is added."
+for required_path in "$asset_catalog/Contents.json" "$app_icon_json" "$app_icon_png"; do
+  if [[ ! -s "$required_path" ]]; then
+    echo "::error title=Release asset blocker::Required AppIcon asset is missing or empty: $required_path"
+    exit 1
+  fi
+done
+
+python3 -m json.tool "$asset_catalog/Contents.json" >/dev/null
+python3 -m json.tool "$app_icon_json" >/dev/null
+grep -F '"filename" : "AppIcon.png"' "$app_icon_json" >/dev/null
+grep -F '"size" : "1024x1024"' "$app_icon_json" >/dev/null
+
+sips -g pixelWidth -g pixelHeight -g hasAlpha "$app_icon_png" > "$icon_info_file"
+grep -F 'pixelWidth: 1024' "$icon_info_file" >/dev/null
+grep -F 'pixelHeight: 1024' "$icon_info_file" >/dev/null
+
+if ! grep -F 'hasAlpha: no' "$icon_info_file" >/dev/null; then
+  echo "::error title=Release asset blocker::AppIcon.png must be fully opaque with no alpha channel"
+  cat "$icon_info_file"
+  exit 1
 fi
 
+echo "✓ AppIcon asset catalog = AppIcon"
+echo "✓ AppIcon.png = 1024x1024, opaque"
 echo "KeepMeter Release preflight completed"
