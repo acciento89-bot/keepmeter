@@ -20,6 +20,9 @@
 		A1000000000000000000000B /* EntitlementStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000C /* EntitlementStore.swift */; };
 		A1000000000000000000000C /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000D /* PaywallView.swift */; };
 		A1000000000000000000000D /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = G10000000000000000000001 /* Localizable.strings */; };
+		A1000000000000000000000E /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000010 /* OnboardingView.swift */; };
+		A1000000000000000000000F /* InsightsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000011 /* InsightsView.swift */; };
+		A10000000000000000000010 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000012 /* SettingsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -38,6 +41,9 @@
 		B1000000000000000000000D /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
 		B1000000000000000000000E /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		B1000000000000000000000F /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/Localizable.strings; sourceTree = "<group>"; };
+		B10000000000000000000010 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		B10000000000000000000011 /* InsightsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InsightsView.swift; sourceTree = "<group>"; };
+		B10000000000000000000012 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -99,6 +105,9 @@
 				B10000000000000000000009 /* PurchaseDetailView.swift */,
 				B1000000000000000000000A /* ArchiveView.swift */,
 				B1000000000000000000000D /* PaywallView.swift */,
+				B10000000000000000000010 /* OnboardingView.swift */,
+				B10000000000000000000011 /* InsightsView.swift */,
+				B10000000000000000000012 /* SettingsView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -193,6 +202,9 @@
 				A1000000000000000000000A /* ArchiveView.swift in Sources */,
 				A1000000000000000000000B /* EntitlementStore.swift in Sources */,
 				A1000000000000000000000C /* PaywallView.swift in Sources */,
+				A1000000000000000000000E /* OnboardingView.swift in Sources */,
+				A1000000000000000000000F /* InsightsView.swift in Sources */,
+				A10000000000000000000010 /* SettingsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
