@@ -15,23 +15,22 @@ struct DashboardView: View {
         purchases.filter { $0.outcome == .active }
     }
 
+    private var urgentCount: Int {
+        activePurchases.filter { $0.daysRemaining() <= 3 }.count
+    }
+
     var body: some View {
         NavigationStack {
-            Group {
+            ZStack {
+                KMBackground()
+
                 if activePurchases.isEmpty {
-                    ContentUnavailableView {
-                        Label(String(localized: "No active purchases"), systemImage: "bag")
-                    } description: {
-                        Text(String(localized: "Add a recent purchase and KeepMeter will help you decide before the return window closes."))
-                    } actions: {
-                        Button(String(localized: "Add purchase")) {
-                            presentAddPurchase()
-                        }
-                        .buttonStyle(.borderedProminent)
-                    }
+                    emptyState
                 } else {
                     ScrollView {
-                        LazyVStack(spacing: 14) {
+                        LazyVStack(spacing: 16) {
+                            dashboardHeader
+
                             if !entitlementStore.isPro && activePurchases.count >= freeActivePurchaseLimit {
                                 freeLimitBanner
                             }
@@ -42,8 +41,11 @@ struct DashboardView: View {
                                 }
                             }
                         }
-                        .padding()
+                        .padding(.horizontal, 16)
+                        .padding(.top, 8)
+                        .padding(.bottom, 28)
                     }
+                    .scrollIndicators(.hidden)
                 }
             }
             .navigationTitle(String(localized: "KeepMeter"))
@@ -53,30 +55,123 @@ struct DashboardView: View {
                         presentAddPurchase()
                     } label: {
                         Image(systemName: "plus")
+                            .font(.headline)
+                            .frame(width: 34, height: 34)
+                            .background(KMTheme.accent.opacity(0.12), in: Circle())
                     }
+                    .foregroundStyle(KMTheme.accent)
                     .accessibilityLabel(String(localized: "Add purchase"))
                 }
             }
             .sheet(isPresented: $showingAddPurchase) {
                 AddPurchaseView()
+                    .tint(KMTheme.accent)
             }
             .sheet(isPresented: $showingPaywall) {
                 PaywallView()
+                    .tint(KMTheme.accent)
             }
         }
+    }
+
+    private var dashboardHeader: some View {
+        HStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(KMTheme.accent.opacity(0.12))
+
+                Image(systemName: urgentCount > 0 ? "hourglass.bottomhalf.filled" : "checkmark.seal.fill")
+                    .font(.system(size: 26, weight: .semibold))
+                    .foregroundStyle(urgentCount > 0 ? KMTheme.warning : KMTheme.accent)
+            }
+            .frame(width: 58, height: 58)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(String(localized: "Decision dashboard"))
+                    .font(.headline)
+
+                Text(headerSubtitle)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(16)
+        .kmCard()
+    }
+
+    private var headerSubtitle: String {
+        if urgentCount > 0 {
+            return String(localized: "\(urgentCount) purchase(s) need attention within three days.")
+        }
+        return String(localized: "Everything is under control. Keep logging real usage.")
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 24) {
+            Spacer()
+
+            ZStack {
+                Circle()
+                    .fill(KMTheme.accent.opacity(0.10))
+                    .frame(width: 128, height: 128)
+
+                Circle()
+                    .stroke(KMTheme.accent.opacity(0.16), lineWidth: 1)
+                    .frame(width: 104, height: 104)
+
+                Image(systemName: "bag.badge.questionmark")
+                    .font(.system(size: 48, weight: .medium))
+                    .foregroundStyle(KMTheme.accent)
+            }
+
+            VStack(spacing: 10) {
+                Text(String(localized: "No active purchases"))
+                    .font(.title2.bold())
+
+                Text(String(localized: "Add a recent purchase and KeepMeter will help you decide before the return window closes."))
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 330)
+            }
+
+            Button {
+                presentAddPurchase()
+            } label: {
+                Label(String(localized: "Add purchase"), systemImage: "plus")
+                    .font(.headline)
+                    .frame(maxWidth: 300)
+                    .frame(height: 52)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(KMTheme.accent)
+
+            Spacer()
+            Spacer()
+        }
+        .padding(24)
     }
 
     private var freeLimitBanner: some View {
         Button {
             showingPaywall = true
         } label: {
-            HStack(spacing: 12) {
-                Image(systemName: "sparkles")
-                    .font(.title3)
+            HStack(spacing: 13) {
+                ZStack {
+                    Circle()
+                        .fill(KMTheme.accent.opacity(0.12))
+                    Image(systemName: "sparkles")
+                        .foregroundStyle(KMTheme.accent)
+                }
+                .frame(width: 42, height: 42)
 
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 3) {
                     Text(String(localized: "Free limit reached"))
                         .font(.headline)
+                        .foregroundStyle(.primary)
                     Text(String(localized: "Lifetime Pro unlocks unlimited active purchases."))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
@@ -84,10 +179,11 @@ struct DashboardView: View {
 
                 Spacer()
                 Image(systemName: "chevron.right")
-                    .foregroundStyle(.secondary)
+                    .font(.caption.bold())
+                    .foregroundStyle(.tertiary)
             }
-            .padding(14)
-            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .padding(15)
+            .kmCard(radius: 20)
         }
         .buttonStyle(.plain)
     }
@@ -105,6 +201,9 @@ struct DashboardView: View {
         modelContext.insert(event)
         purchase.usageEvents.append(event)
         try? modelContext.save()
+
+        let generator = UINotificationFeedbackGenerator()
+        generator.notificationOccurred(.success)
     }
 }
 
@@ -116,57 +215,126 @@ private struct PurchaseCardView: View {
         DecisionEngine.evaluate(purchase)
     }
 
+    private var progress: Double {
+        purchase.returnWindowElapsedRatio()
+    }
+
+    private var statusColor: Color {
+        switch snapshot.status {
+        case .keep: KMTheme.success
+        case .review: KMTheme.warning
+        case .returnCandidate: KMTheme.danger
+        }
+    }
+
+    private var currencyCode: String {
+        Locale.current.currency?.identifier ?? "EUR"
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(spacing: 0) {
             NavigationLink {
                 PurchaseDetailView(purchase: purchase)
             } label: {
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 15) {
+                    HStack(alignment: .center, spacing: 12) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 15, style: .continuous)
+                                .fill(statusColor.opacity(0.11))
+
+                            Image(systemName: statusIcon)
+                                .font(.system(size: 21, weight: .semibold))
+                                .foregroundStyle(statusColor)
+                        }
+                        .frame(width: 48, height: 48)
+
                         VStack(alignment: .leading, spacing: 3) {
                             Text(purchase.name)
                                 .font(.headline)
                                 .foregroundStyle(.primary)
+                                .lineLimit(1)
 
-                            if !purchase.merchant.isEmpty {
-                                Text(purchase.merchant)
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                            }
+                            Text(purchase.merchant.isEmpty ? purchase.purchaseDate.formatted(date: .abbreviated, time: .omitted) : purchase.merchant)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
                         }
 
                         Spacer()
                         DecisionBadge(status: snapshot.status)
                     }
 
-                    HStack(spacing: 18) {
-                        MetricLabel(
-                            title: String(localized: "Uses"),
-                            value: "\(purchase.useCount)"
-                        )
-
+                    HStack(spacing: 0) {
+                        MetricLabel(title: String(localized: "Uses"), value: "\(purchase.useCount)")
+                        metricDivider
                         MetricLabel(
                             title: String(localized: "Cost / use"),
-                            value: purchase.costPerUse.map { $0.formatted(.currency(code: Locale.current.currency?.identifier ?? "EUR")) } ?? "—"
+                            value: purchase.costPerUse?.formatted(.currency(code: currencyCode)) ?? "—"
                         )
-
+                        metricDivider
                         MetricLabel(
                             title: String(localized: "Days left"),
-                            value: "\(max(snapshot.daysRemaining, 0))"
+                            value: snapshot.daysRemaining >= 0 ? "\(snapshot.daysRemaining)" : "—"
                         )
                     }
+
+                    VStack(spacing: 6) {
+                        HStack {
+                            Text(String(localized: "Return window"))
+                            Spacer()
+                            Text(purchase.returnDeadline.formatted(date: .abbreviated, time: .omitted))
+                        }
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                        GeometryReader { geometry in
+                            ZStack(alignment: .leading) {
+                                Capsule()
+                                    .fill(Color.primary.opacity(0.07))
+                                Capsule()
+                                    .fill(statusColor.opacity(0.75))
+                                    .frame(width: max(8, geometry.size.width * min(max(progress, 0), 1)))
+                            }
+                        }
+                        .frame(height: 6)
+                    }
                 }
+                .padding(16)
             }
             .buttonStyle(.plain)
 
+            Divider()
+                .opacity(0.5)
+
             Button(action: onUse) {
-                Label(String(localized: "Used it"), systemImage: "plus.circle.fill")
-                    .frame(maxWidth: .infinity)
+                HStack(spacing: 8) {
+                    Image(systemName: "plus.circle.fill")
+                    Text(String(localized: "Used it"))
+                }
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(KMTheme.accent)
+                .frame(maxWidth: .infinity)
+                .frame(height: 46)
+                .contentShape(Rectangle())
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.plain)
         }
-        .padding(16)
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .kmCard()
+    }
+
+    private var metricDivider: some View {
+        Rectangle()
+            .fill(Color.primary.opacity(0.08))
+            .frame(width: 1, height: 32)
+            .padding(.horizontal, 14)
+    }
+
+    private var statusIcon: String {
+        switch snapshot.status {
+        case .keep: "checkmark.seal.fill"
+        case .review: "eye.fill"
+        case .returnCandidate: "arrow.uturn.backward.circle.fill"
+        }
     }
 }
 
@@ -175,14 +343,18 @@ private struct MetricLabel: View {
     let value: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(title)
-                .font(.caption)
-                .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 3) {
             Text(value)
-                .font(.subheadline.weight(.semibold))
+                .font(.headline)
                 .foregroundStyle(.primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+            Text(title)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -191,10 +363,15 @@ struct DecisionBadge: View {
 
     var body: some View {
         Text(label)
-            .font(.caption.weight(.bold))
-            .padding(.horizontal, 9)
-            .padding(.vertical, 5)
-            .background(tint.opacity(0.15), in: Capsule())
+            .font(.caption2.weight(.bold))
+            .tracking(0.5)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(tint.opacity(0.12), in: Capsule())
+            .overlay {
+                Capsule()
+                    .strokeBorder(tint.opacity(0.18), lineWidth: 0.8)
+            }
             .foregroundStyle(tint)
     }
 
@@ -208,9 +385,9 @@ struct DecisionBadge: View {
 
     private var tint: Color {
         switch status {
-        case .keep: .green
-        case .review: .orange
-        case .returnCandidate: .red
+        case .keep: KMTheme.success
+        case .review: KMTheme.warning
+        case .returnCandidate: KMTheme.danger
         }
     }
 }
