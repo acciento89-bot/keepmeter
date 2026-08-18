@@ -13,82 +13,129 @@ struct SettingsView: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                Section(String(localized: "Pro")) {
-                    Button {
-                        if !entitlementStore.isPro {
-                            showingPaywall = true
-                        }
-                    } label: {
-                        HStack(spacing: 14) {
-                            Image(systemName: entitlementStore.isPro ? "checkmark.seal.fill" : "sparkles")
-                                .font(.title2)
-                                .frame(width: 36)
+            ZStack {
+                KMBackground()
 
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(entitlementStore.isPro ? String(localized: "Lifetime Pro unlocked") : String(localized: "KeepMeter Pro"))
-                                    .font(.headline)
-                                    .foregroundStyle(.primary)
-
-                                Text(entitlementStore.isPro ? String(localized: "Unlimited active purchases are enabled.") : String(localized: "One purchase. No subscription."))
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                            }
-
-                            Spacer()
-
-                            if !entitlementStore.isPro {
-                                Image(systemName: "chevron.right")
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                        .padding(.vertical, 4)
-                    }
-                    .buttonStyle(.plain)
-
-                    Button(String(localized: "Restore purchases")) {
-                        Task {
-                            await entitlementStore.restorePurchases()
-                        }
-                    }
-                }
-
-                Section(String(localized: "Privacy")) {
-                    Label {
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(String(localized: "Local-first"))
-                            Text(String(localized: "Your core purchase and usage data stays on this device. No account is required for v1."))
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    } icon: {
-                        Image(systemName: "lock.shield")
-                    }
-                }
-
-                Section(String(localized: "Help")) {
-                    Button(String(localized: "Show introduction again")) {
-                        hasCompletedOnboarding = false
-                    }
-                }
-
-                Section(String(localized: "About")) {
-                    LabeledContent(String(localized: "Version"), value: versionText)
-                    LabeledContent(String(localized: "Developer"), value: "Kamilunavo")
-                }
-
-                if let error = entitlementStore.lastErrorMessage {
+                List {
                     Section {
-                        Text(error)
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
+                        proCard
+                            .listRowInsets(EdgeInsets())
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                    }
+
+                    Section {
+                        Button {
+                            Task {
+                                await entitlementStore.restorePurchases()
+                            }
+                        } label: {
+                            Label(String(localized: "Restore purchases"), systemImage: "arrow.clockwise.circle")
+                        }
+                    } header: {
+                        Text(String(localized: "Pro"))
+                    }
+
+                    Section(String(localized: "Privacy")) {
+                        Label {
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(String(localized: "Local-first"))
+                                    .foregroundStyle(.primary)
+                                Text(String(localized: "Your core purchase and usage data stays on this device. No account is required for v1."))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        } icon: {
+                            Image(systemName: "lock.shield.fill")
+                                .foregroundStyle(KMTheme.success)
+                        }
+                    }
+
+                    Section(String(localized: "Help")) {
+                        Button {
+                            hasCompletedOnboarding = false
+                        } label: {
+                            Label(String(localized: "Show introduction again"), systemImage: "sparkles.rectangle.stack")
+                        }
+                    }
+
+                    Section(String(localized: "About")) {
+                        LabeledContent(String(localized: "Version"), value: versionText)
+                        LabeledContent(String(localized: "Developer"), value: "Kamilunavo")
+                    }
+
+                    if let error = entitlementStore.lastErrorMessage {
+                        Section {
+                            Label {
+                                Text(error)
+                                    .font(.footnote)
+                            } icon: {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundStyle(KMTheme.warning)
+                            }
+                        }
                     }
                 }
+                .scrollContentBackground(.hidden)
+                .listSectionSpacing(18)
             }
             .navigationTitle(String(localized: "Settings"))
+            .tint(KMTheme.accent)
             .sheet(isPresented: $showingPaywall) {
                 PaywallView()
+                    .tint(KMTheme.accent)
             }
         }
+    }
+
+    private var proCard: some View {
+        Button {
+            if !entitlementStore.isPro {
+                showingPaywall = true
+            }
+        } label: {
+            HStack(spacing: 15) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(Color.white.opacity(0.16))
+                    Image(systemName: entitlementStore.isPro ? "checkmark.seal.fill" : "sparkles")
+                        .font(.system(size: 26, weight: .semibold))
+                }
+                .frame(width: 58, height: 58)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(entitlementStore.isPro ? String(localized: "Lifetime Pro unlocked") : String(localized: "KeepMeter Pro"))
+                        .font(.headline)
+
+                    Text(entitlementStore.isPro ? String(localized: "Unlimited active purchases are enabled.") : String(localized: "One purchase. No subscription."))
+                        .font(.subheadline)
+                        .opacity(0.84)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 6)
+
+                if !entitlementStore.isPro {
+                    Image(systemName: "chevron.right")
+                        .font(.caption.bold())
+                        .opacity(0.75)
+                }
+            }
+            .padding(17)
+            .foregroundStyle(.white)
+            .background(
+                LinearGradient(
+                    colors: entitlementStore.isPro
+                        ? [KMTheme.success, KMTheme.success.opacity(0.78)]
+                        : [KMTheme.accent, KMTheme.accentSoft],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ),
+                in: RoundedRectangle(cornerRadius: 24, style: .continuous)
+            )
+            .shadow(color: (entitlementStore.isPro ? KMTheme.success : KMTheme.accent).opacity(0.18), radius: 14, y: 8)
+        }
+        .buttonStyle(.plain)
+        .padding(.vertical, 4)
     }
 }

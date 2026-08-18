@@ -9,43 +9,56 @@ struct OnboardingView: View {
             icon: "bag.badge.questionmark",
             title: String(localized: "Buy less blindly"),
             text: String(localized: "Add a purchase and keep its return deadline visible instead of forgetting it in a drawer."),
-            accent: .blue
+            accent: KMTheme.accent
         ),
         .init(
-            icon: "plus.circle.fill",
+            icon: "hand.tap.fill",
             title: String(localized: "Track real use"),
             text: String(localized: "Tap once whenever you use an item. KeepMeter turns that into usage count and cost per use."),
-            accent: .indigo
+            accent: KMTheme.accentSoft
         ),
         .init(
             icon: "checkmark.seal.fill",
             title: String(localized: "Decide in time"),
             text: String(localized: "Get an explainable KEEP, REVIEW or RETURN signal before the return window closes."),
-            accent: .green
+            accent: KMTheme.success
         )
     ]
 
     var body: some View {
         ZStack {
-            Color(.systemGroupedBackground)
-                .ignoresSafeArea()
+            KMBackground()
 
             VStack(spacing: 0) {
                 HStack {
-                    Text(String(localized: "KeepMeter"))
-                        .font(.headline)
+                    HStack(spacing: 9) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(KMTheme.accent)
+                            Image(systemName: "gauge.with.dots.needle.67percent")
+                                .font(.caption.bold())
+                                .foregroundStyle(.white)
+                        }
+                        .frame(width: 32, height: 32)
+
+                        Text(String(localized: "KeepMeter"))
+                            .font(.headline)
+                    }
+
                     Spacer()
+
                     if page < pages.count - 1 {
                         Button(String(localized: "Skip"), action: onComplete)
                             .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.secondary)
                     }
                 }
                 .padding(.horizontal, 24)
-                .padding(.top, 18)
+                .padding(.top, 14)
 
                 TabView(selection: $page) {
                     ForEach(Array(pages.enumerated()), id: \.offset) { index, item in
-                        card(item)
+                        onboardingCard(item, index: index)
                             .tag(index)
                             .padding(.horizontal, 24)
                     }
@@ -55,16 +68,18 @@ struct OnboardingView: View {
                 HStack(spacing: 8) {
                     ForEach(pages.indices, id: \.self) { index in
                         Capsule()
-                            .fill(index == page ? Color.primary : Color.secondary.opacity(0.25))
-                            .frame(width: index == page ? 28 : 8, height: 8)
-                            .animation(.easeInOut(duration: 0.2), value: page)
+                            .fill(index == page ? KMTheme.accent : Color.secondary.opacity(0.20))
+                            .frame(width: index == page ? 30 : 8, height: 8)
+                            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: page)
                     }
                 }
-                .padding(.bottom, 24)
+                .padding(.bottom, 22)
 
                 Button {
                     if page < pages.count - 1 {
-                        withAnimation { page += 1 }
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                            page += 1
+                        }
                     } else {
                         onComplete()
                     }
@@ -76,33 +91,56 @@ struct OnboardingView: View {
                     }
                     .font(.headline)
                     .padding(.horizontal, 18)
-                    .frame(height: 54)
-                    .background(Color.primary, in: RoundedRectangle(cornerRadius: 17, style: .continuous))
-                    .foregroundStyle(Color(.systemBackground))
+                    .frame(height: 56)
+                    .foregroundStyle(.white)
+                    .background(
+                        LinearGradient(
+                            colors: [KMTheme.accent, KMTheme.accentSoft],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        ),
+                        in: RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    )
+                    .shadow(color: KMTheme.accent.opacity(0.20), radius: 14, y: 8)
                 }
+                .buttonStyle(.plain)
                 .padding(.horizontal, 24)
                 .padding(.bottom, 24)
             }
         }
     }
 
-    private func card(_ item: OnboardingPage) -> some View {
-        VStack(spacing: 28) {
-            Spacer()
+    private func onboardingCard(_ item: OnboardingPage, index: Int) -> some View {
+        VStack(spacing: 26) {
+            Spacer(minLength: 18)
 
             ZStack {
-                RoundedRectangle(cornerRadius: 34, style: .continuous)
+                RoundedRectangle(cornerRadius: 38, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                    .frame(height: 280)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 38, style: .continuous)
+                            .strokeBorder(Color.primary.opacity(0.07), lineWidth: 0.8)
+                    }
+                    .shadow(color: Color.black.opacity(0.05), radius: 18, y: 10)
+
+                Circle()
                     .fill(item.accent.opacity(0.12))
-                    .frame(width: 154, height: 154)
+                    .frame(width: 158, height: 158)
+
+                Circle()
+                    .stroke(item.accent.opacity(0.15), lineWidth: 1)
+                    .frame(width: 128, height: 128)
 
                 Image(systemName: item.icon)
-                    .font(.system(size: 64, weight: .semibold))
+                    .font(.system(size: 58, weight: .semibold))
+                    .symbolRenderingMode(.hierarchical)
                     .foregroundStyle(item.accent)
             }
 
             VStack(spacing: 12) {
                 Text(item.title)
-                    .font(.system(size: 32, weight: .bold, design: .rounded))
+                    .font(.system(size: 31, weight: .bold, design: .rounded))
                     .multilineTextAlignment(.center)
 
                 Text(item.text)
@@ -110,11 +148,12 @@ struct OnboardingView: View {
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .lineSpacing(3)
+                    .frame(maxWidth: 340)
             }
 
             Spacer()
-            Spacer()
         }
+        .accessibilityElement(children: .combine)
     }
 }
 

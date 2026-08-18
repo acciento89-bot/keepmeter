@@ -52,6 +52,7 @@
 "No subscription" = "No subscription";
 "Future Pro features included" = "Future Pro features included";
 "Load Lifetime Pro" = "Load Lifetime Pro";
+"Unlock Lifetime Pro" = "Unlock Lifetime Pro";
 "Restore purchases" = "Restore purchases";
 "Pro" = "Pro";
 "Close" = "Close";
@@ -88,3 +89,11 @@
 "About" = "About";
 "Version" = "Version";
 "Developer" = "Developer";
+"Decision dashboard" = "Decision dashboard";
+"Everything is under control. Keep logging real usage." = "Everything is under control. Keep logging real usage.";
+"Return window" = "Return window";
+"One tap updates the real cost per use." = "One tap updates the real cost per use.";
+"Your final decision" = "Your final decision";
+"KeepMeter gives you a signal. You stay in control." = "KeepMeter gives you a signal. You stay in control.";
+"Start the decision clock" = "Start the decision clock";
+"Add the real return deadline, then track how often the purchase earns its place." = "Add the real return deadline, then track how often the purchase earns its place.";
