@@ -34,22 +34,38 @@ final class EntitlementStore: ObservableObject {
     }
 
     func load() async {
+        lastErrorMessage = nil
         isLoading = true
         defer { isLoading = false }
 
         do {
             lifetimeProduct = try await Product.products(for: [Self.lifetimeProductID]).first
             await refreshEntitlements()
+
+            if lifetimeProduct == nil && !isPro {
+                lastErrorMessage = String(localized: "Lifetime Pro is currently unavailable.")
+            }
         } catch {
             lastErrorMessage = error.localizedDescription
         }
     }
 
     func purchaseLifetime() async {
-        guard let lifetimeProduct else {
+        lastErrorMessage = nil
+
+        if lifetimeProduct == nil {
             await load()
+        }
+
+        guard let lifetimeProduct else {
+            if lastErrorMessage == nil {
+                lastErrorMessage = String(localized: "Lifetime Pro is currently unavailable.")
+            }
             return
         }
+
+        isLoading = true
+        defer { isLoading = false }
 
         do {
             let result = try await lifetimeProduct.purchase()
@@ -79,6 +95,10 @@ final class EntitlementStore: ObservableObject {
     }
 
     func restorePurchases() async {
+        lastErrorMessage = nil
+        isLoading = true
+        defer { isLoading = false }
+
         do {
             try await AppStore.sync()
             await refreshEntitlements()
