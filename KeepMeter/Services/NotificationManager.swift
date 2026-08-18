@@ -10,6 +10,14 @@ enum NotificationManager {
         }
     }
 
+    static func authorizationStatus() async -> UNAuthorizationStatus {
+        await withCheckedContinuation { continuation in
+            UNUserNotificationCenter.current().getNotificationSettings { settings in
+                continuation.resume(returning: settings.authorizationStatus)
+            }
+        }
+    }
+
     static func scheduleReturnReminders(for purchase: Purchase, calendar: Calendar = .current) async {
         let center = UNUserNotificationCenter.current()
         let prefix = reminderPrefix(for: purchase)
