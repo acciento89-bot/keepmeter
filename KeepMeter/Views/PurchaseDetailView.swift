@@ -6,6 +6,8 @@ struct PurchaseDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
+    @State private var dataErrorMessage: String?
+
     let purchase: Purchase
 
     private var isActive: Bool {
@@ -66,6 +68,19 @@ struct PurchaseDetailView: View {
         }
         .navigationTitle(purchase.name)
         .navigationBarTitleDisplayMode(.inline)
+        .alert(
+            String(localized: "Couldn't save change"),
+            isPresented: Binding(
+                get: { dataErrorMessage != nil },
+                set: { if !$0 { dataErrorMessage = nil } }
+            )
+        ) {
+            Button(String(localized: "Close"), role: .cancel) {
+                dataErrorMessage = nil
+            }
+        } message: {
+            Text(dataErrorMessage ?? "")
+        }
     }
 
     @ViewBuilder
@@ -450,7 +465,13 @@ struct PurchaseDetailView: View {
         let event = UsageEvent()
         modelContext.insert(event)
         purchase.usageEvents.append(event)
-        try? modelContext.save()
+
+        do {
+            try modelContext.save()
+        } catch {
+            modelContext.rollback()
+            dataErrorMessage = String(localized: "Your change couldn't be saved. Please try again.")
+        }
     }
 
     private func finish(as outcome: PurchaseOutcome) {
@@ -458,9 +479,15 @@ struct PurchaseDetailView: View {
 
         purchase.outcome = outcome
         purchase.archivedAt = .now
-        NotificationManager.cancelReturnReminders(for: purchase)
-        try? modelContext.save()
-        dismiss()
+
+        do {
+            try modelContext.save()
+            NotificationManager.cancelReturnReminders(for: purchase)
+            dismiss()
+        } catch {
+            modelContext.rollback()
+            dataErrorMessage = String(localized: "Your change couldn't be saved. Please try again.")
+        }
     }
 }
 
