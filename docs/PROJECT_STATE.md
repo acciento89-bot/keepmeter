@@ -1,10 +1,10 @@
 # KeepMeter — Project State
 
 Last updated: 2026-08-18
-Status: ACTIVE — POLISHED MVP + LOCAL STOREKIT QA BASE GREEN
+Status: ACTIVE — POLISHED MVP + RELEASE HARDENING GREEN
 Repository: `acciento89-bot/keepmeter`
 Default branch: `main`
-Current verified checkpoint: `f9541c26a4ea63b78c302977a95566827c37b45f`
+Current verified checkpoint: `f3718152acbd7b51ba90bbb399e3de6fc1116d64`
 
 ## Handoff rule
 
@@ -66,44 +66,57 @@ Core loop: **Bought -> Use -> Measure -> Decide before deadline.**
 - Reminder cancellation when a purchase is completed.
 - Main tabs: Active / Insights / Archive / Settings.
 
-### Monetization
+### Data-integrity hardening
+
+- Archived purchases are read-only in Purchase Detail.
+- Archived purchases no longer show active usage logging or final-decision controls.
+- Archived purchases no longer display a newly recalculated live DecisionEngine recommendation; the stored final outcome is shown instead.
+- Active-state guards protect usage/final-decision mutations even if UI state regresses later.
+- Creating a purchase no longer swallows SwiftData save failures.
+- Failed creation saves roll back and show a localized error.
+- Return reminders are scheduled only after the purchase successfully persists.
+
+Important: source-level persistence handling is hardened, but a real terminate/relaunch persistence session has not yet been exercised from this connector environment.
+
+### Monetization / local StoreKit testing
 
 - Product ID: `de.kamilunavo.keepmeter.pro.lifetime`.
-- Free tier: maximum 5 active purchases.
-- Completed purchases do not count against the limit.
-- Lifetime Pro unlocks unlimited active purchases.
-- No subscription in v1.
-- Missing product surfaces a localized error.
-- First Lifetime tap loads a missing product and continues the same purchase attempt.
-- Purchase/restore operations clear stale errors and expose loading state consistently.
+- Free tier: maximum 5 active purchases; completed purchases do not count.
+- Lifetime Pro unlocks unlimited active purchases; no subscription in v1.
+- Local configuration: `KeepMeter/StoreKit/KeepMeter.storekit`.
+- One non-consumable Lifetime product with exact production product ID.
+- Local test price: 9.99; not a locked App Store price tier.
+- DE/EN StoreKit metadata.
+- Shared Debug Run scheme references local StoreKit configuration.
+- CI validates JSON, product ID and scheme reference.
+- DEBUG-only Settings diagnostics show product ID, loaded state, test price, current entitlement and reload/refresh controls.
+- Missing product and first-tap loading behavior are hardened.
 
-### Local StoreKit testing
+Important: local StoreKit is structurally/compile validated, but the interactive Free -> Pro -> restore sequence has not yet been clicked through in Xcode/Simulator/device.
 
-- Local configuration committed at `KeepMeter/StoreKit/KeepMeter.storekit`.
-- Configuration contains one non-consumable Lifetime Pro product with the exact production product ID.
-- Current local test price: 9.99; this is test metadata and does not lock the final App Store price tier.
-- DE/EN StoreKit product metadata is present.
-- Shared Debug Run scheme references the local StoreKit configuration.
-- CI validates JSON syntax, exact product ID and scheme reference before compiling.
-- Settings contains a `#if DEBUG` StoreKit QA section showing product ID, loaded state, display price and current entitlement, plus reload/refresh controls.
-- Debug-only QA UI is excluded from Release/TestFlight builds.
-
-Important: the local StoreKit environment and scheme are compile/structure validated, but an interactive Xcode purchase sheet has not yet been clicked through from this connector environment. Do not claim Free -> Pro -> restore has been exercised end-to-end until it is actually run in Xcode/Simulator or device.
-
-### Notification hardening
+### Notifications
 
 - Dynamic reminder copy uses stable format localization keys.
 - DE/EN purchase-name and days-remaining interpolation is fixed.
 - Settings reads current `UNAuthorizationStatus`.
-- User can request permission from Settings when not determined.
-- If denied, Settings offers direct handoff to iOS Settings.
-- Notification status refreshes when the app becomes active again.
+- Permission can be requested from Settings.
+- Denied permission offers direct iOS Settings handoff.
+- Status refreshes when the app becomes active again.
 
-### Visual system
+### Visual / accessibility hardening
 
-Polished MVP styling covers Onboarding, Dashboard, Add Purchase, Purchase Detail, Insights, Archive, Settings and Paywall with adaptive backgrounds, material cards, KeepMeter accent/status colors, return-window progress, metric hierarchy, decision hero treatment and Lifetime-first Pro presentation.
+- Polished visual language covers Onboarding, Dashboard, Add Purchase, Purchase Detail, Insights, Archive, Settings and Paywall.
+- Dashboard, Purchase Detail, Archive and Insights now switch to stacked/adaptive layouts at Accessibility Dynamic Type sizes.
+- Insights grid reduces from two columns to one for accessibility sizes.
+- Onboarding reduces decorative artwork footprint at accessibility sizes so content remains readable.
+- Paywall purchase layout adapts at accessibility sizes.
+- Fixed-height text controls were replaced with content-driven vertical padding where clipping was possible.
+- Decorative icons are hidden from VoiceOver where appropriate.
+- Major cards/metrics use improved accessibility grouping.
+- Return-window progress exposes an accessibility value.
+- Another runtime localization bug in the dashboard urgency count was replaced with a stable format key.
 
-Dedicated manual light/dark and accessibility QA remains open.
+A real-device VoiceOver and visual light/dark inspection is still open; do not claim runtime accessibility QA is complete yet.
 
 ## Verified build gates
 
@@ -132,11 +145,17 @@ Dedicated manual light/dark and accessibility QA remains open.
 - Merge `e82813b2f53677112700c5f0cdbcb0db6a9402c7`
 
 ### Gate 5 — Local StoreKit test environment
-- PR #5 `Add local StoreKit test environment`
+- PR #5
 - Workflow `32184529919`
-- StoreKit configuration validation: SUCCESS
-- Full iOS Simulator build: SUCCESS
+- StoreKit validation + full simulator build: SUCCESS
 - Merge `f9541c26a4ea63b78c302977a95566827c37b45f`
+
+### Gate 6 — Data integrity / accessibility hardening
+- PR #6 `Harden data integrity and accessibility`
+- Workflow `32185398795`
+- StoreKit validation: SUCCESS
+- Full iOS Simulator build: SUCCESS
+- Merge `f3718152acbd7b51ba90bbb399e3de6fc1116d64`
 
 Major source passes must remain CI-green before merge/TestFlight.
 
@@ -166,50 +185,50 @@ Cost per use is informative only; it does not pretend a universal price threshol
 
 GREEN / STRUCTURALLY VALIDATED:
 - functional simulator compile
-- visual-polish simulator compile
+- full visual-polish compile
 - StoreKit/reminder hardening compile
 - notification-controls compile
-- local StoreKit config JSON / product ID / scheme reference
-- app compile with StoreKit-enabled shared Debug scheme
+- local StoreKit config / product ID / scheme validation
+- data-integrity + Dynamic Type/accessibility source hardening compile
 
 Still not explicitly exercised end-to-end:
 - physical-device QA
-- persistence/relaunch behavior
+- terminate/relaunch persistence behavior
 - actual local-notification delivery on device
 - interactive local StoreKit purchase session
-- Free-limit -> Lifetime Pro -> restore behavior
-- dedicated light/dark QA
-- accessibility QA
+- Free-limit -> Lifetime Pro -> restore flow
+- visual light/dark inspection on runtime
+- VoiceOver runtime QA
 
 Release:
 - no TestFlight build yet
 - no App Store submission yet
 - matching Lifetime IAP still needs App Store Connect configuration before sandbox/TestFlight purchase testing
 
-## Still open for MVP
-
-1. Exercise local StoreKit purchase and restore interactively in Xcode/Simulator.
-2. Create/configure matching Lifetime IAP in App Store Connect.
-3. Persistence/relaunch QA.
-4. Notification delivery QA on device.
-5. Free-limit / purchase / restore QA.
-6. Dedicated light/dark appearance QA and fixes.
-7. Accessibility pass.
-8. Final visual identity / app icon.
-9. Final-enough name/domain/trademark due diligence before public branding.
-10. First TestFlight readiness pass and signed archive/upload.
-
 ## Naming
 
 Working name: `KeepMeter`.
 Status: PROVISIONAL.
-Preliminary checks did not reveal an obvious exact-name consumer-app collision, but formal trademark clearance/domain reservation are not recorded yet.
+A stronger web exact-name check on 2026-08-18 did not surface an obvious exact consumer-app/software result in the searches performed. Search-engine absence is not formal trademark clearance. Formal EUIPO/DPMA/domain clearance is still not recorded and the public name is not locked.
+
+## Still open for MVP
+
+1. Exercise local StoreKit purchase and restore interactively in Xcode/Simulator.
+2. Create/configure matching Lifetime IAP in App Store Connect.
+3. Terminate/relaunch persistence QA.
+4. Notification delivery QA on device.
+5. Free-limit / purchase / restore runtime QA.
+6. Dedicated runtime light/dark inspection and fixes.
+7. VoiceOver runtime QA.
+8. Final visual identity / app icon.
+9. Formal-enough EUIPO/DPMA/domain due diligence before public branding.
+10. First TestFlight readiness pass and signed archive/upload.
 
 ## Immediate next steps
 
-1. Add persistence/relaunch QA support and harden any data-integrity edge cases found.
-2. Run source-level light/dark + accessibility hardening and CI gate it.
-3. Exercise local StoreKit Free -> Lifetime Pro -> restore interactively when an Xcode runtime is available.
-4. Exercise real notification scheduling/delivery on device using Settings diagnostics.
-5. Lock icon/public branding after stronger name due diligence.
-6. Configure App Store Connect Lifetime IAP and prepare first signed TestFlight build after QA gates are green.
+1. Perform final naming/domain/trademark due diligence far enough to lock public branding.
+2. Establish final app icon / visual identity after the name is sufficiently safe.
+3. Configure Lifetime IAP in App Store Connect.
+4. Exercise StoreKit, persistence and notification flows on an Xcode/device runtime.
+5. Perform final light/dark + VoiceOver runtime inspection.
+6. Prepare the first signed TestFlight build only after those runtime gates are green.
