@@ -95,9 +95,9 @@ struct PaywallView: View {
             Divider().padding(.leading, 52)
 
             benefitRow(
-                icon: "sparkles",
-                title: String(localized: "Future Pro features included"),
-                tint: KMTheme.warning
+                icon: "lock.shield.fill",
+                title: String(localized: "Local-first"),
+                tint: KMTheme.accent
             )
         }
         .padding(.horizontal, 16)
