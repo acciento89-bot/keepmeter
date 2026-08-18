@@ -1,10 +1,10 @@
 # KeepMeter — Project State
 
 Last updated: 2026-08-18
-Status: ACTIVE — PERSISTENCE + RELEASE BUILD GATES GREEN
+Status: ACTIVE — RELEASE PREFLIGHT GREEN / FINAL BRANDING OPEN
 Repository: `acciento89-bot/keepmeter`
 Default branch: `main`
-Current verified checkpoint: `dad79a620f375ed2c5eaa9ce4d40784130aab164`
+Current verified checkpoint: `5582461de995c8954f44b78c3314b3dbf2ee22c2`
 
 ## Handoff rule
 
@@ -123,12 +123,29 @@ Important: local StoreKit is structurally/compile validated, but the interactive
 
 A real-device VoiceOver and visual light/dark inspection is still open; do not claim runtime accessibility QA is complete yet.
 
-### Release build validation
+### Release validation / App Store preflight
 
-- CI now compiles both Debug and Release configurations for the generic iOS Simulator.
-- Release compilation validates code paths with DEBUG-only QA UI excluded.
-- StoreKit configuration validation and SwiftData persistence reopen run before both app builds.
+- CI compiles both Debug and Release configurations for the generic iOS Simulator.
+- `ci/release-preflight.sh` reads Xcode Release build settings and asserts the expected configuration values before app compilation.
+- Preflight currently verifies:
+  - `CONFIGURATION = Release`
+  - bundle ID `de.kamilunavo.keepmeter`
+  - semantic marketing version `0.1.0`
+  - positive build number `1`
+  - generated Info.plist enabled
+  - iOS deployment target `17.0`
+  - iPhone device family
+  - display name `KeepMeter`
+  - Utilities category
+- The preflight intentionally reports the missing final AppIcon asset catalog as a Release blocker warning rather than pretending it exists.
+- `docs/APP_STORE_RELEASE.md` now centralizes technical App Store values, App Store Connect blockers, DE/EN listing drafts, privacy constraints, screenshot plan and runtime submission checklist.
 - Release simulator compilation is not a signed Archive and does not replace the first real TestFlight archive/upload gate.
+
+### Current release asset blocker
+
+- No final `Assets.xcassets/AppIcon.appiconset` is configured yet.
+- Final AppIcon remains blocked on sufficiently safe public-name/branding lock.
+- Once the final AppIcon is added, the preflight should be changed from warning to hard failure if the icon asset is missing or misconfigured.
 
 ## Verified build gates
 
@@ -186,6 +203,16 @@ A real-device VoiceOver and visual light/dark inspection is still open; do not c
 - Full iOS Simulator Release build: SUCCESS
 - Merge `dad79a620f375ed2c5eaa9ce4d40784130aab164`
 
+### Gate 9 — App Store release preflight
+- PR #9 `Add App Store release preflight`
+- Workflow `32186964254`
+- StoreKit validation: SUCCESS
+- App Store Release build-setting preflight: SUCCESS
+- SwiftData persistence reopen: SUCCESS
+- Full iOS Simulator Debug build: SUCCESS
+- Full iOS Simulator Release build: SUCCESS
+- Merge `5582461de995c8954f44b78c3314b3dbf2ee22c2`
+
 Major source passes must remain CI-green before merge/TestFlight.
 
 ## DecisionEngine v1
@@ -221,6 +248,7 @@ GREEN / STRUCTURALLY VALIDATED:
 - data-integrity + Dynamic Type/accessibility source hardening compile
 - file-backed SwiftData persistence write/reopen verification
 - mutation save failures rollback instead of silently succeeding
+- App Store-facing Release build-setting preflight
 - full Debug simulator compilation
 - full Release simulator compilation
 
@@ -236,6 +264,7 @@ Still not explicitly exercised end-to-end:
 Release:
 - no TestFlight build yet
 - no App Store submission yet
+- final AppIcon missing
 - matching Lifetime IAP still needs App Store Connect configuration before sandbox/TestFlight purchase testing
 - signed Archive/export/upload has not yet been exercised
 
@@ -247,24 +276,22 @@ A stronger web exact-name check on 2026-08-18 did not surface an obvious exact c
 
 ## Still open for MVP
 
-1. Audit and close App Store release asset/metadata blockers, especially final app icon and target configuration.
-2. Exercise local StoreKit purchase and restore interactively in Xcode/Simulator.
-3. Create/configure matching Lifetime IAP in App Store Connect.
-4. Physical terminate/relaunch persistence QA.
-5. Notification delivery QA on device.
-6. Free-limit / purchase / restore runtime QA.
-7. Dedicated runtime light/dark inspection and fixes.
-8. VoiceOver runtime QA.
-9. Final visual identity / app icon.
-10. Formal-enough EUIPO/DPMA/domain due diligence before public branding.
-11. First signed TestFlight archive/upload.
+1. Continue name/domain/trademark due diligence far enough to lock public branding.
+2. Design/add final AppIcon asset catalog and convert AppIcon preflight warning into a hard CI gate.
+3. Exercise local StoreKit purchase and restore interactively in Xcode/Simulator.
+4. Create/configure matching Lifetime IAP in App Store Connect.
+5. Physical terminate/relaunch persistence QA.
+6. Notification delivery QA on device.
+7. Free-limit / purchase / restore runtime QA.
+8. Dedicated runtime light/dark inspection and fixes.
+9. VoiceOver runtime QA.
+10. First signed TestFlight archive/upload.
 
 ## Immediate next steps
 
-1. Audit current Release output and Xcode target for AppIcon/Info.plist/version/build warnings and missing release assets.
-2. Continue naming/domain/trademark due diligence far enough to lock public branding.
-3. Establish final app icon / visual identity after the name is sufficiently safe.
-4. Configure Lifetime IAP in App Store Connect.
-5. Exercise StoreKit, persistence and notification flows on Xcode/device runtime.
-6. Perform final light/dark + VoiceOver runtime inspection.
-7. Prepare the first signed TestFlight build only after those runtime gates are green.
+1. Perform final-enough EUIPO/DPMA/domain due diligence for `KeepMeter` and decide whether public branding can be locked.
+2. Create the final AppIcon/visual identity, add `Assets.xcassets`, wire `ASSETCATALOG_COMPILER_APPICON_NAME`, and make CI fail if AppIcon is missing.
+3. Configure Lifetime IAP in App Store Connect.
+4. Exercise StoreKit, persistence and notification flows on Xcode/device runtime.
+5. Perform final light/dark + VoiceOver runtime inspection.
+6. Prepare the first signed TestFlight build only after those runtime gates are green.
