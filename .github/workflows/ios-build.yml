@@ -36,13 +36,25 @@ jobs:
             -o /tmp/keepmeter-persistence-smoke
           /tmp/keepmeter-persistence-smoke
 
-      - name: Build KeepMeter for iOS Simulator
+      - name: Build KeepMeter Debug for iOS Simulator
         run: |
           set -o pipefail
           xcodebuild \
             -project KeepMeter.xcodeproj \
             -scheme KeepMeter \
             -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Build KeepMeter Release for iOS Simulator
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project KeepMeter.xcodeproj \
+            -scheme KeepMeter \
+            -configuration Release \
             -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' \
             CODE_SIGNING_ALLOWED=NO \
