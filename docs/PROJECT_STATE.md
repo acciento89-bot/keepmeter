@@ -1,10 +1,10 @@
 # KeepMeter — Project State
 
 Last updated: 2026-08-18
-Status: ACTIVE — POLISHED MVP + RELEASE HARDENING GREEN
+Status: ACTIVE — POLISHED MVP + PERSISTENCE GATE GREEN
 Repository: `acciento89-bot/keepmeter`
 Default branch: `main`
-Current verified checkpoint: `f3718152acbd7b51ba90bbb399e3de6fc1116d64`
+Current verified checkpoint: `2b93368f084ccf4808a0fa2a5e68c5d7dc51bc0c`
 
 ## Handoff rule
 
@@ -66,7 +66,7 @@ Core loop: **Bought -> Use -> Measure -> Decide before deadline.**
 - Reminder cancellation when a purchase is completed.
 - Main tabs: Active / Insights / Archive / Settings.
 
-### Data-integrity hardening
+### Data-integrity / persistence hardening
 
 - Archived purchases are read-only in Purchase Detail.
 - Archived purchases no longer show active usage logging or final-decision controls.
@@ -74,9 +74,14 @@ Core loop: **Bought -> Use -> Measure -> Decide before deadline.**
 - Active-state guards protect usage/final-decision mutations even if UI state regresses later.
 - Creating a purchase no longer swallows SwiftData save failures.
 - Failed creation saves roll back and show a localized error.
-- Return reminders are scheduled only after the purchase successfully persists.
+- Usage logging on Dashboard and Purchase Detail now saves explicitly; failed saves roll back and surface a localized error instead of showing false success.
+- Final keep/return decisions now save explicitly and roll back on failure.
+- Return reminders are scheduled only after a purchase successfully persists.
+- Existing return reminders are cancelled only after the final archived outcome successfully persists.
+- `ci/PersistenceSmoke.swift` uses the real `Purchase` and `UsageEvent` models with a file-backed SwiftData store.
+- CI writes a purchase, usage relationship and archived outcome, destroys the first container, reopens the same store, then verifies IDs, fields, dates, relationship, outcome and derived cost-per-use.
 
-Important: source-level persistence handling is hardened, but a real terminate/relaunch persistence session has not yet been exercised from this connector environment.
+Important: executable file-backed persistence reopen is now CI-green. A physical iPhone terminate/relaunch session remains a separate runtime QA gate and must not be claimed as completed yet.
 
 ### Monetization / local StoreKit testing
 
@@ -106,7 +111,7 @@ Important: local StoreKit is structurally/compile validated, but the interactive
 ### Visual / accessibility hardening
 
 - Polished visual language covers Onboarding, Dashboard, Add Purchase, Purchase Detail, Insights, Archive, Settings and Paywall.
-- Dashboard, Purchase Detail, Archive and Insights now switch to stacked/adaptive layouts at Accessibility Dynamic Type sizes.
+- Dashboard, Purchase Detail, Archive and Insights switch to stacked/adaptive layouts at Accessibility Dynamic Type sizes.
 - Insights grid reduces from two columns to one for accessibility sizes.
 - Onboarding reduces decorative artwork footprint at accessibility sizes so content remains readable.
 - Paywall purchase layout adapts at accessibility sizes.
@@ -114,7 +119,7 @@ Important: local StoreKit is structurally/compile validated, but the interactive
 - Decorative icons are hidden from VoiceOver where appropriate.
 - Major cards/metrics use improved accessibility grouping.
 - Return-window progress exposes an accessibility value.
-- Another runtime localization bug in the dashboard urgency count was replaced with a stable format key.
+- Runtime-count localization in the dashboard uses a stable format key.
 
 A real-device VoiceOver and visual light/dark inspection is still open; do not claim runtime accessibility QA is complete yet.
 
@@ -157,6 +162,14 @@ A real-device VoiceOver and visual light/dark inspection is still open; do not c
 - Full iOS Simulator build: SUCCESS
 - Merge `f3718152acbd7b51ba90bbb399e3de6fc1116d64`
 
+### Gate 7 — SwiftData persistence reopen
+- PR #7 `Add SwiftData persistence reopen gate`
+- Workflow `32186180485`
+- StoreKit validation: SUCCESS
+- File-backed SwiftData write -> container destroy -> reopen verification: SUCCESS
+- Full iOS Simulator Debug build: SUCCESS
+- Merge `2b93368f084ccf4808a0fa2a5e68c5d7dc51bc0c`
+
 Major source passes must remain CI-green before merge/TestFlight.
 
 ## DecisionEngine v1
@@ -190,10 +203,12 @@ GREEN / STRUCTURALLY VALIDATED:
 - notification-controls compile
 - local StoreKit config / product ID / scheme validation
 - data-integrity + Dynamic Type/accessibility source hardening compile
+- file-backed SwiftData persistence write/reopen verification
+- mutation save failures rollback instead of silently succeeding
 
 Still not explicitly exercised end-to-end:
 - physical-device QA
-- terminate/relaunch persistence behavior
+- physical terminate/relaunch persistence behavior
 - actual local-notification delivery on device
 - interactive local StoreKit purchase session
 - Free-limit -> Lifetime Pro -> restore flow
@@ -209,26 +224,28 @@ Release:
 
 Working name: `KeepMeter`.
 Status: PROVISIONAL.
-A stronger web exact-name check on 2026-08-18 did not surface an obvious exact consumer-app/software result in the searches performed. Search-engine absence is not formal trademark clearance. Formal EUIPO/DPMA/domain clearance is still not recorded and the public name is not locked.
+A stronger web exact-name check on 2026-08-18 did not surface an obvious exact consumer-app/software result in the searches performed. EUIPO itself recommends checking identical and similar marks in TMview/eSearch before filing; search-engine absence is not formal trademark clearance. Formal EUIPO/DPMA/domain clearance is still not recorded and the public name is not locked.
 
 ## Still open for MVP
 
-1. Exercise local StoreKit purchase and restore interactively in Xcode/Simulator.
-2. Create/configure matching Lifetime IAP in App Store Connect.
-3. Terminate/relaunch persistence QA.
-4. Notification delivery QA on device.
-5. Free-limit / purchase / restore runtime QA.
-6. Dedicated runtime light/dark inspection and fixes.
-7. VoiceOver runtime QA.
-8. Final visual identity / app icon.
-9. Formal-enough EUIPO/DPMA/domain due diligence before public branding.
-10. First TestFlight readiness pass and signed archive/upload.
+1. Add a Release-configuration simulator build gate so TestFlight-only compilation paths are validated.
+2. Exercise local StoreKit purchase and restore interactively in Xcode/Simulator.
+3. Create/configure matching Lifetime IAP in App Store Connect.
+4. Physical terminate/relaunch persistence QA.
+5. Notification delivery QA on device.
+6. Free-limit / purchase / restore runtime QA.
+7. Dedicated runtime light/dark inspection and fixes.
+8. VoiceOver runtime QA.
+9. Final visual identity / app icon.
+10. Formal-enough EUIPO/DPMA/domain due diligence before public branding.
+11. First TestFlight readiness pass and signed archive/upload.
 
 ## Immediate next steps
 
-1. Perform final naming/domain/trademark due diligence far enough to lock public branding.
-2. Establish final app icon / visual identity after the name is sufficiently safe.
-3. Configure Lifetime IAP in App Store Connect.
-4. Exercise StoreKit, persistence and notification flows on an Xcode/device runtime.
-5. Perform final light/dark + VoiceOver runtime inspection.
-6. Prepare the first signed TestFlight build only after those runtime gates are green.
+1. Add and CI-gate a Release-configuration iOS Simulator build in addition to Debug.
+2. Continue naming/domain/trademark due diligence far enough to lock public branding.
+3. Establish final app icon / visual identity after the name is sufficiently safe.
+4. Configure Lifetime IAP in App Store Connect.
+5. Exercise StoreKit, persistence and notification flows on Xcode/device runtime.
+6. Perform final light/dark + VoiceOver runtime inspection.
+7. Prepare the first signed TestFlight build only after those runtime gates are green.
