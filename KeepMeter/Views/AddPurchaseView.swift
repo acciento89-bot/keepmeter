@@ -11,6 +11,7 @@ struct AddPurchaseView: View {
     @State private var purchaseDate = Date()
     @State private var returnDeadline = Calendar.current.date(byAdding: .day, value: 14, to: Date()) ?? Date()
     @State private var wantsReminders = true
+    @State private var showingSaveError = false
 
     private var parsedPrice: Double? {
         let normalized = priceText
@@ -108,6 +109,11 @@ struct AddPurchaseView: View {
                     .disabled(!canSave)
                 }
             }
+            .alert(String(localized: "Save"), isPresented: $showingSaveError) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(String(localized: "The purchase could not be saved. Please try again."))
+            }
         }
     }
 
@@ -121,6 +127,7 @@ struct AddPurchaseView: View {
                     .foregroundStyle(KMTheme.accent)
             }
             .frame(width: 54, height: 54)
+            .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(String(localized: "Start the decision clock"))
@@ -136,6 +143,7 @@ struct AddPurchaseView: View {
         .padding(16)
         .kmCard()
         .padding(.vertical, 4)
+        .accessibilityElement(children: .combine)
     }
 
     private func save() {
@@ -150,7 +158,14 @@ struct AddPurchaseView: View {
         )
 
         modelContext.insert(purchase)
-        try? modelContext.save()
+
+        do {
+            try modelContext.save()
+        } catch {
+            modelContext.rollback()
+            showingSaveError = true
+            return
+        }
 
         if wantsReminders {
             Task {

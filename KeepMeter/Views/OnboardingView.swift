@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct OnboardingView: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     let onComplete: () -> Void
     @State private var page = 0
 
@@ -40,12 +42,13 @@ struct OnboardingView: View {
                                 .foregroundStyle(.white)
                         }
                         .frame(width: 32, height: 32)
+                        .accessibilityHidden(true)
 
                         Text(String(localized: "KeepMeter"))
                             .font(.headline)
                     }
 
-                    Spacer()
+                    Spacer(minLength: 8)
 
                     if page < pages.count - 1 {
                         Button(String(localized: "Skip"), action: onComplete)
@@ -58,7 +61,7 @@ struct OnboardingView: View {
 
                 TabView(selection: $page) {
                     ForEach(Array(pages.enumerated()), id: \.offset) { index, item in
-                        onboardingCard(item, index: index)
+                        onboardingCard(item)
                             .tag(index)
                             .padding(.horizontal, 24)
                     }
@@ -74,6 +77,8 @@ struct OnboardingView: View {
                     }
                 }
                 .padding(.bottom, 22)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("\(page + 1) / \(pages.count)")
 
                 Button {
                     if page < pages.count - 1 {
@@ -88,10 +93,12 @@ struct OnboardingView: View {
                         Text(page == pages.count - 1 ? String(localized: "Start tracking") : String(localized: "Continue"))
                         Spacer()
                         Image(systemName: page == pages.count - 1 ? "checkmark" : "arrow.right")
+                            .accessibilityHidden(true)
                     }
                     .font(.headline)
                     .padding(.horizontal, 18)
-                    .frame(height: 56)
+                    .padding(.vertical, 16)
+                    .frame(maxWidth: .infinity)
                     .foregroundStyle(.white)
                     .background(
                         LinearGradient(
@@ -110,38 +117,46 @@ struct OnboardingView: View {
         }
     }
 
-    private func onboardingCard(_ item: OnboardingPage, index: Int) -> some View {
-        VStack(spacing: 26) {
-            Spacer(minLength: 18)
+    private func onboardingCard(_ item: OnboardingPage) -> some View {
+        VStack(spacing: dynamicTypeSize.isAccessibilitySize ? 16 : 26) {
+            Spacer(minLength: dynamicTypeSize.isAccessibilitySize ? 6 : 18)
 
             ZStack {
-                RoundedRectangle(cornerRadius: 38, style: .continuous)
+                RoundedRectangle(cornerRadius: dynamicTypeSize.isAccessibilitySize ? 28 : 38, style: .continuous)
                     .fill(.ultraThinMaterial)
-                    .frame(height: 280)
+                    .frame(height: dynamicTypeSize.isAccessibilitySize ? 170 : 280)
                     .overlay {
-                        RoundedRectangle(cornerRadius: 38, style: .continuous)
+                        RoundedRectangle(cornerRadius: dynamicTypeSize.isAccessibilitySize ? 28 : 38, style: .continuous)
                             .strokeBorder(Color.primary.opacity(0.07), lineWidth: 0.8)
                     }
                     .shadow(color: Color.black.opacity(0.05), radius: 18, y: 10)
 
                 Circle()
                     .fill(item.accent.opacity(0.12))
-                    .frame(width: 158, height: 158)
+                    .frame(
+                        width: dynamicTypeSize.isAccessibilitySize ? 104 : 158,
+                        height: dynamicTypeSize.isAccessibilitySize ? 104 : 158
+                    )
 
                 Circle()
                     .stroke(item.accent.opacity(0.15), lineWidth: 1)
-                    .frame(width: 128, height: 128)
+                    .frame(
+                        width: dynamicTypeSize.isAccessibilitySize ? 84 : 128,
+                        height: dynamicTypeSize.isAccessibilitySize ? 84 : 128
+                    )
 
                 Image(systemName: item.icon)
-                    .font(.system(size: 58, weight: .semibold))
+                    .font(.system(size: dynamicTypeSize.isAccessibilitySize ? 38 : 58, weight: .semibold))
                     .symbolRenderingMode(.hierarchical)
                     .foregroundStyle(item.accent)
             }
+            .accessibilityHidden(true)
 
             VStack(spacing: 12) {
                 Text(item.title)
-                    .font(.system(size: 31, weight: .bold, design: .rounded))
+                    .font(.largeTitle.bold())
                     .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 Text(item.text)
                     .font(.body)
@@ -149,9 +164,10 @@ struct OnboardingView: View {
                     .multilineTextAlignment(.center)
                     .lineSpacing(3)
                     .frame(maxWidth: 340)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
-            Spacer()
+            Spacer(minLength: 4)
         }
         .accessibilityElement(children: .combine)
     }

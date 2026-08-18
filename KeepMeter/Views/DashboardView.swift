@@ -86,6 +86,7 @@ struct DashboardView: View {
                     .foregroundStyle(urgentCount > 0 ? KMTheme.warning : KMTheme.accent)
             }
             .frame(width: 58, height: 58)
+            .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(String(localized: "Decision dashboard"))
@@ -101,11 +102,19 @@ struct DashboardView: View {
         }
         .padding(16)
         .kmCard()
+        .accessibilityElement(children: .combine)
     }
 
     private var headerSubtitle: String {
         if urgentCount > 0 {
-            return String(localized: "\(urgentCount) purchase(s) need attention within three days.")
+            return String(
+                format: NSLocalizedString(
+                    "dashboard.urgentCount",
+                    comment: "Number of purchases that need attention within three days; %ld is the count"
+                ),
+                locale: Locale.current,
+                urgentCount
+            )
         }
         return String(localized: "Everything is under control. Keep logging real usage.")
     }
@@ -127,6 +136,7 @@ struct DashboardView: View {
                     .font(.system(size: 48, weight: .medium))
                     .foregroundStyle(KMTheme.accent)
             }
+            .accessibilityHidden(true)
 
             VStack(spacing: 10) {
                 Text(String(localized: "No active purchases"))
@@ -145,7 +155,7 @@ struct DashboardView: View {
                 Label(String(localized: "Add purchase"), systemImage: "plus")
                     .font(.headline)
                     .frame(maxWidth: 300)
-                    .frame(height: 52)
+                    .padding(.vertical, 14)
             }
             .buttonStyle(.borderedProminent)
             .tint(KMTheme.accent)
@@ -168,6 +178,7 @@ struct DashboardView: View {
                         .foregroundStyle(KMTheme.accent)
                 }
                 .frame(width: 42, height: 42)
+                .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text(String(localized: "Free limit reached"))
@@ -176,17 +187,21 @@ struct DashboardView: View {
                     Text(String(localized: "Lifetime Pro unlocks unlimited active purchases."))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
 
-                Spacer()
+                Spacer(minLength: 4)
                 Image(systemName: "chevron.right")
                     .font(.caption.bold())
                     .foregroundStyle(.tertiary)
+                    .accessibilityHidden(true)
             }
             .padding(15)
             .kmCard(radius: 20)
         }
         .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
     }
 
     private func presentAddPurchase() {
@@ -198,6 +213,8 @@ struct DashboardView: View {
     }
 
     private func logUse(for purchase: Purchase) {
+        guard purchase.outcome == .active else { return }
+
         let event = UsageEvent()
         modelContext.insert(event)
         purchase.usageEvents.append(event)
@@ -209,6 +226,8 @@ struct DashboardView: View {
 }
 
 private struct PurchaseCardView: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     let purchase: Purchase
     let onUse: () -> Void
 
@@ -238,46 +257,8 @@ private struct PurchaseCardView: View {
                 PurchaseDetailView(purchase: purchase)
             } label: {
                 VStack(alignment: .leading, spacing: 15) {
-                    HStack(alignment: .center, spacing: 12) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 15, style: .continuous)
-                                .fill(statusColor.opacity(0.11))
-
-                            Image(systemName: statusIcon)
-                                .font(.system(size: 21, weight: .semibold))
-                                .foregroundStyle(statusColor)
-                        }
-                        .frame(width: 48, height: 48)
-
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(purchase.name)
-                                .font(.headline)
-                                .foregroundStyle(.primary)
-                                .lineLimit(1)
-
-                            Text(purchase.merchant.isEmpty ? purchase.purchaseDate.formatted(date: .abbreviated, time: .omitted) : purchase.merchant)
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                        }
-
-                        Spacer()
-                        DecisionBadge(status: snapshot.status)
-                    }
-
-                    HStack(spacing: 0) {
-                        MetricLabel(title: String(localized: "Uses"), value: "\(purchase.useCount)")
-                        metricDivider
-                        MetricLabel(
-                            title: String(localized: "Cost / use"),
-                            value: purchase.costPerUse?.formatted(.currency(code: currencyCode)) ?? "—"
-                        )
-                        metricDivider
-                        MetricLabel(
-                            title: String(localized: "Days left"),
-                            value: snapshot.daysRemaining >= 0 ? "\(snapshot.daysRemaining)" : "—"
-                        )
-                    }
+                    purchaseHeader
+                    metrics
 
                     VStack(spacing: 6) {
                         HStack {
@@ -298,6 +279,9 @@ private struct PurchaseCardView: View {
                             }
                         }
                         .frame(height: 6)
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel(String(localized: "Return window"))
+                        .accessibilityValue(progress.formatted(.percent.precision(.fractionLength(0))))
                     }
                 }
                 .padding(16)
@@ -315,12 +299,93 @@ private struct PurchaseCardView: View {
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(KMTheme.accent)
                 .frame(maxWidth: .infinity)
-                .frame(height: 46)
+                .padding(.vertical, 14)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
         }
         .kmCard()
+    }
+
+    @ViewBuilder
+    private var purchaseHeader: some View {
+        if dynamicTypeSize.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .top, spacing: 12) {
+                    statusIconView
+                    purchaseIdentity
+                }
+                DecisionBadge(status: snapshot.status)
+            }
+        } else {
+            HStack(alignment: .center, spacing: 12) {
+                statusIconView
+                purchaseIdentity
+                Spacer(minLength: 6)
+                DecisionBadge(status: snapshot.status)
+            }
+        }
+    }
+
+    private var statusIconView: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 15, style: .continuous)
+                .fill(statusColor.opacity(0.11))
+
+            Image(systemName: statusIcon)
+                .font(.system(size: 21, weight: .semibold))
+                .foregroundStyle(statusColor)
+        }
+        .frame(width: 48, height: 48)
+        .accessibilityHidden(true)
+    }
+
+    private var purchaseIdentity: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(purchase.name)
+                .font(.headline)
+                .foregroundStyle(.primary)
+                .lineLimit(dynamicTypeSize.isAccessibilitySize ? 3 : 2)
+
+            Text(purchase.merchant.isEmpty ? purchase.purchaseDate.formatted(date: .abbreviated, time: .omitted) : purchase.merchant)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .lineLimit(dynamicTypeSize.isAccessibilitySize ? 3 : 2)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private var metrics: some View {
+        if dynamicTypeSize.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: 10) {
+                MetricLabel(title: String(localized: "Uses"), value: "\(purchase.useCount)")
+                Divider()
+                MetricLabel(
+                    title: String(localized: "Cost / use"),
+                    value: purchase.costPerUse?.formatted(.currency(code: currencyCode)) ?? "—"
+                )
+                Divider()
+                MetricLabel(
+                    title: String(localized: "Days left"),
+                    value: snapshot.daysRemaining >= 0 ? "\(snapshot.daysRemaining)" : "—"
+                )
+            }
+        } else {
+            HStack(spacing: 0) {
+                MetricLabel(title: String(localized: "Uses"), value: "\(purchase.useCount)")
+                metricDivider
+                MetricLabel(
+                    title: String(localized: "Cost / use"),
+                    value: purchase.costPerUse?.formatted(.currency(code: currencyCode)) ?? "—"
+                )
+                metricDivider
+                MetricLabel(
+                    title: String(localized: "Days left"),
+                    value: snapshot.daysRemaining >= 0 ? "\(snapshot.daysRemaining)" : "—"
+                )
+            }
+        }
     }
 
     private var metricDivider: some View {
@@ -348,14 +413,14 @@ private struct MetricLabel: View {
             Text(value)
                 .font(.headline)
                 .foregroundStyle(.primary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
+                .monospacedDigit()
             Text(title)
                 .font(.caption2)
                 .foregroundStyle(.secondary)
-                .lineLimit(1)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -374,6 +439,7 @@ struct DecisionBadge: View {
                     .strokeBorder(tint.opacity(0.18), lineWidth: 0.8)
             }
             .foregroundStyle(tint)
+            .accessibilityLabel(label)
     }
 
     private var label: String {

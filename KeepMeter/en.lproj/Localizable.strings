@@ -117,3 +117,5 @@
 "Notifications are disabled in iOS Settings." = "Notifications are disabled in iOS Settings.";
 "KeepMeter can schedule return-deadline reminders." = "KeepMeter can schedule return-deadline reminders.";
 "Notification status could not be determined." = "Notification status could not be determined.";
+"dashboard.urgentCount" = "%ld purchase(s) need attention within three days.";
+"The purchase could not be saved. Please try again." = "The purchase could not be saved. Please try again.";

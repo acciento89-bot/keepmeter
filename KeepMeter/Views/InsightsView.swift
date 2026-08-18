@@ -2,6 +2,7 @@ import SwiftUI
 import SwiftData
 
 struct InsightsView: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Query(sort: \Purchase.createdAt, order: .reverse) private var purchases: [Purchase]
 
     private var active: [Purchase] { purchases.filter { $0.outcome == .active } }
@@ -24,6 +25,12 @@ struct InsightsView: View {
 
     private var currencyCode: String {
         Locale.current.currency?.identifier ?? "EUR"
+    }
+
+    private var summaryColumns: [GridItem] {
+        dynamicTypeSize.isAccessibilitySize
+            ? [GridItem(.flexible())]
+            : [GridItem(.flexible()), GridItem(.flexible())]
     }
 
     var body: some View {
@@ -64,6 +71,7 @@ struct InsightsView: View {
                     .font(.system(size: 44, weight: .medium))
                     .foregroundStyle(KMTheme.accent)
             }
+            .accessibilityHidden(true)
 
             VStack(spacing: 8) {
                 Text(String(localized: "No insights yet"))
@@ -88,25 +96,27 @@ struct InsightsView: View {
                     .foregroundStyle(KMTheme.accent)
             }
             .frame(width: 62, height: 62)
+            .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(String(localized: "Tracked value"))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                 Text(totalTrackedValue.formatted(.currency(code: currencyCode)))
-                    .font(.system(size: 30, weight: .bold, design: .rounded))
-                    .minimumScaleFactor(0.7)
-                    .lineLimit(1)
+                    .font(.largeTitle.bold())
+                    .monospacedDigit()
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
-            Spacer()
+            Spacer(minLength: 0)
         }
         .padding(18)
         .kmCard()
+        .accessibilityElement(children: .combine)
     }
 
     private var summaryGrid: some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+        LazyVGrid(columns: summaryColumns, spacing: 12) {
             InsightCard(
                 icon: "hand.tap.fill",
                 title: String(localized: "Total uses"),
@@ -142,22 +152,36 @@ struct InsightsView: View {
             Text(String(localized: "Your decisions"))
                 .font(.title3.bold())
 
-            HStack(spacing: 12) {
-                DecisionCountCard(
-                    title: String(localized: "Kept"),
-                    count: kept.count,
-                    systemImage: "checkmark.circle.fill",
-                    tint: KMTheme.success
-                )
-
-                DecisionCountCard(
-                    title: String(localized: "Returned"),
-                    count: returned.count,
-                    systemImage: "arrow.uturn.backward.circle.fill",
-                    tint: KMTheme.danger
-                )
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(spacing: 12) {
+                    decisionKeptCard
+                    decisionReturnedCard
+                }
+            } else {
+                HStack(spacing: 12) {
+                    decisionKeptCard
+                    decisionReturnedCard
+                }
             }
         }
+    }
+
+    private var decisionKeptCard: some View {
+        DecisionCountCard(
+            title: String(localized: "Kept"),
+            count: kept.count,
+            systemImage: "checkmark.circle.fill",
+            tint: KMTheme.success
+        )
+    }
+
+    private var decisionReturnedCard: some View {
+        DecisionCountCard(
+            title: String(localized: "Returned"),
+            count: returned.count,
+            systemImage: "arrow.uturn.backward.circle.fill",
+            tint: KMTheme.danger
+        )
     }
 
     @ViewBuilder
@@ -167,7 +191,7 @@ struct InsightsView: View {
                 Text(String(localized: "Best value so far"))
                     .font(.title3.bold())
 
-                HStack(spacing: 14) {
+                HStack(alignment: .top, spacing: 14) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 16, style: .continuous)
                             .fill(KMTheme.warning.opacity(0.12))
@@ -176,22 +200,23 @@ struct InsightsView: View {
                             .foregroundStyle(KMTheme.warning)
                     }
                     .frame(width: 52, height: 52)
+                    .accessibilityHidden(true)
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text(bestValuePurchase.name)
                             .font(.headline)
-                            .lineLimit(1)
+                            .lineLimit(dynamicTypeSize.isAccessibilitySize ? 3 : 2)
                         Text("\(bestValuePurchase.useCount) \(String(localized: "uses")) · \(costPerUse.formatted(.currency(code: currencyCode))) / \(String(localized: "use"))")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.75)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
 
-                    Spacer()
+                    Spacer(minLength: 0)
                 }
                 .padding(16)
                 .kmCard(radius: 20)
+                .accessibilityElement(children: .combine)
             }
         }
     }
@@ -213,21 +238,22 @@ private struct InsightCard: View {
                     .foregroundStyle(tint)
             }
             .frame(width: 36, height: 36)
+            .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(value)
                     .font(.title2.bold())
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
+                    .monospacedDigit()
                 Text(title)
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
         .frame(maxWidth: .infinity, minHeight: 126, alignment: .leading)
         .padding(16)
         .kmCard(radius: 20)
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -242,9 +268,11 @@ private struct DecisionCountCard: View {
             Image(systemName: systemImage)
                 .font(.title3)
                 .foregroundStyle(tint)
+                .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 1) {
                 Text("\(count)")
                     .font(.title3.bold())
+                    .monospacedDigit()
                 Text(title)
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -254,5 +282,6 @@ private struct DecisionCountCard: View {
         .padding(15)
         .frame(maxWidth: .infinity)
         .kmCard(radius: 18)
+        .accessibilityElement(children: .combine)
     }
 }

@@ -4,8 +4,13 @@ import SwiftData
 struct PurchaseDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     let purchase: Purchase
+
+    private var isActive: Bool {
+        purchase.outcome == .active
+    }
 
     private var snapshot: DecisionSnapshot {
         DecisionEngine.evaluate(purchase)
@@ -23,6 +28,14 @@ struct PurchaseDetailView: View {
         }
     }
 
+    private var outcomeColor: Color {
+        switch purchase.outcome {
+        case .active: KMTheme.accent
+        case .kept: KMTheme.success
+        case .returned: KMTheme.danger
+        }
+    }
+
     var body: some View {
         ZStack {
             KMBackground()
@@ -30,14 +43,20 @@ struct PurchaseDetailView: View {
             ScrollView {
                 VStack(spacing: 16) {
                     decisionHero
-                    useAction
+
+                    if isActive {
+                        useAction
+                    }
+
                     purchaseInformation
 
                     if !purchase.usageEvents.isEmpty {
                         recentUses
                     }
 
-                    finalDecision
+                    if isActive {
+                        finalDecision
+                    }
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
@@ -49,27 +68,26 @@ struct PurchaseDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 
+    @ViewBuilder
     private var decisionHero: some View {
+        if isActive {
+            activeDecisionHero
+        } else {
+            archivedDecisionHero
+        }
+    }
+
+    private var activeDecisionHero: some View {
         VStack(alignment: .leading, spacing: 18) {
             HStack(alignment: .top, spacing: 14) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .fill(statusColor.opacity(0.12))
-
-                    Image(systemName: statusIcon)
-                        .font(.system(size: 30, weight: .semibold))
-                        .foregroundStyle(statusColor)
-                }
-                .frame(width: 66, height: 66)
+                heroIcon(systemName: statusIcon, tint: statusColor)
 
                 VStack(alignment: .leading, spacing: 6) {
-                    HStack {
-                        DecisionBadge(status: snapshot.status)
-                        Spacer()
-                    }
+                    DecisionBadge(status: snapshot.status)
 
                     Text(purchase.price, format: .currency(code: currencyCode))
-                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .font(.title.bold())
+                        .monospacedDigit()
                 }
             }
 
@@ -78,32 +96,121 @@ struct PurchaseDetailView: View {
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
-            HStack(spacing: 0) {
-                DetailMetric(
-                    title: String(localized: "Uses"),
-                    value: "\(purchase.useCount)",
-                    icon: "hand.tap"
-                )
+            activeMetrics
+        }
+        .padding(18)
+        .kmCard()
+    }
 
-                divider
+    private var archivedDecisionHero: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(alignment: .top, spacing: 14) {
+                heroIcon(systemName: outcomeIcon, tint: outcomeColor)
 
-                DetailMetric(
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(outcomeLabel)
+                        .font(.caption.weight(.bold))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(outcomeColor.opacity(0.12), in: Capsule())
+                        .foregroundStyle(outcomeColor)
+
+                    Text(purchase.price, format: .currency(code: currencyCode))
+                        .font(.title.bold())
+                        .monospacedDigit()
+                }
+            }
+
+            if let archivedAt = purchase.archivedAt {
+                Text(archivedAt.formatted(date: .long, time: .omitted))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
+            archivedMetrics
+        }
+        .padding(18)
+        .kmCard()
+        .accessibilityElement(children: .combine)
+    }
+
+    private func heroIcon(systemName: String, tint: Color) -> some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(tint.opacity(0.12))
+
+            Image(systemName: systemName)
+                .font(.system(size: 30, weight: .semibold))
+                .foregroundStyle(tint)
+        }
+        .frame(width: 66, height: 66)
+        .accessibilityHidden(true)
+    }
+
+    @ViewBuilder
+    private var activeMetrics: some View {
+        if dynamicTypeSize.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: 12) {
+                detailMetric(title: String(localized: "Uses"), value: "\(purchase.useCount)", icon: "hand.tap")
+                Divider()
+                detailMetric(
                     title: String(localized: "Cost / use"),
                     value: purchase.costPerUse?.formatted(.currency(code: currencyCode)) ?? "—",
                     icon: "eurosign.circle"
                 )
-
+                Divider()
+                detailMetric(
+                    title: String(localized: "Days left"),
+                    value: snapshot.daysRemaining >= 0 ? "\(snapshot.daysRemaining)" : String(localized: "Expired"),
+                    icon: "hourglass"
+                )
+            }
+        } else {
+            HStack(spacing: 0) {
+                detailMetric(title: String(localized: "Uses"), value: "\(purchase.useCount)", icon: "hand.tap")
                 divider
-
-                DetailMetric(
+                detailMetric(
+                    title: String(localized: "Cost / use"),
+                    value: purchase.costPerUse?.formatted(.currency(code: currencyCode)) ?? "—",
+                    icon: "eurosign.circle"
+                )
+                divider
+                detailMetric(
                     title: String(localized: "Days left"),
                     value: snapshot.daysRemaining >= 0 ? "\(snapshot.daysRemaining)" : String(localized: "Expired"),
                     icon: "hourglass"
                 )
             }
         }
-        .padding(18)
-        .kmCard()
+    }
+
+    @ViewBuilder
+    private var archivedMetrics: some View {
+        if dynamicTypeSize.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: 12) {
+                detailMetric(title: String(localized: "Uses"), value: "\(purchase.useCount)", icon: "hand.tap")
+                Divider()
+                detailMetric(
+                    title: String(localized: "Cost / use"),
+                    value: purchase.costPerUse?.formatted(.currency(code: currencyCode)) ?? "—",
+                    icon: "eurosign.circle"
+                )
+            }
+        } else {
+            HStack(spacing: 0) {
+                detailMetric(title: String(localized: "Uses"), value: "\(purchase.useCount)", icon: "hand.tap")
+                divider
+                detailMetric(
+                    title: String(localized: "Cost / use"),
+                    value: purchase.costPerUse?.formatted(.currency(code: currencyCode)) ?? "—",
+                    icon: "eurosign.circle"
+                )
+            }
+        }
+    }
+
+    private func detailMetric(title: String, value: String, icon: String) -> some View {
+        DetailMetric(title: title, value: value, icon: icon)
     }
 
     private var useAction: some View {
@@ -118,6 +225,7 @@ struct PurchaseDetailView: View {
                         .font(.headline)
                 }
                 .frame(width: 34, height: 34)
+                .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: 1) {
                     Text(String(localized: "Log a use"))
@@ -125,13 +233,15 @@ struct PurchaseDetailView: View {
                     Text(String(localized: "One tap updates the real cost per use."))
                         .font(.caption)
                         .opacity(0.82)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
 
-                Spacer()
+                Spacer(minLength: 4)
                 Image(systemName: "hand.tap.fill")
                     .font(.title3)
+                    .accessibilityHidden(true)
             }
-            .padding(.horizontal, 16)
+            .padding(16)
             .frame(minHeight: 68)
             .foregroundStyle(.white)
             .background(
@@ -145,6 +255,8 @@ struct PurchaseDetailView: View {
             .shadow(color: KMTheme.accent.opacity(0.18), radius: 12, y: 7)
         }
         .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
     }
 
     private var purchaseInformation: some View {
@@ -194,6 +306,7 @@ struct PurchaseDetailView: View {
                 HStack(spacing: 12) {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundStyle(KMTheme.success)
+                        .accessibilityHidden(true)
 
                     Text(event.timestamp.formatted(date: .abbreviated, time: .shortened))
                         .font(.subheadline)
@@ -227,7 +340,7 @@ struct PurchaseDetailView: View {
                 Label(String(localized: "Keep purchase"), systemImage: "checkmark.circle.fill")
                     .font(.headline)
                     .frame(maxWidth: .infinity)
-                    .frame(height: 48)
+                    .padding(.vertical, 12)
             }
             .buttonStyle(.borderedProminent)
             .tint(KMTheme.success)
@@ -238,7 +351,7 @@ struct PurchaseDetailView: View {
                 Label(String(localized: "Mark as returned"), systemImage: "arrow.uturn.backward.circle.fill")
                     .font(.headline)
                     .frame(maxWidth: .infinity)
-                    .frame(height: 48)
+                    .padding(.vertical, 12)
             }
             .buttonStyle(.bordered)
             .tint(KMTheme.danger)
@@ -262,21 +375,53 @@ struct PurchaseDetailView: View {
         }
     }
 
+    private var outcomeIcon: String {
+        switch purchase.outcome {
+        case .active: "timer"
+        case .kept: "checkmark.circle.fill"
+        case .returned: "arrow.uturn.backward.circle.fill"
+        }
+    }
+
+    private var outcomeLabel: String {
+        switch purchase.outcome {
+        case .active: String(localized: "Active")
+        case .kept: String(localized: "Kept")
+        case .returned: String(localized: "Returned")
+        }
+    }
+
+    @ViewBuilder
     private func infoRow(icon: String, title: String, value: String) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .foregroundStyle(KMTheme.accent)
-                .frame(width: 24)
+        if dynamicTypeSize.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: 6) {
+                Label(title, systemImage: icon)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                Text(value)
+                    .font(.subheadline.weight(.semibold))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityElement(children: .combine)
+        } else {
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .foregroundStyle(KMTheme.accent)
+                    .frame(width: 24)
+                    .accessibilityHidden(true)
 
-            Text(title)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+                Text(title)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
 
-            Spacer()
+                Spacer()
 
-            Text(value)
-                .font(.subheadline.weight(.semibold))
-                .multilineTextAlignment(.trailing)
+                Text(value)
+                    .font(.subheadline.weight(.semibold))
+                    .multilineTextAlignment(.trailing)
+            }
+            .accessibilityElement(children: .combine)
         }
     }
 
@@ -300,6 +445,8 @@ struct PurchaseDetailView: View {
     }
 
     private func logUse() {
+        guard purchase.outcome == .active else { return }
+
         let event = UsageEvent()
         modelContext.insert(event)
         purchase.usageEvents.append(event)
@@ -307,6 +454,8 @@ struct PurchaseDetailView: View {
     }
 
     private func finish(as outcome: PurchaseOutcome) {
+        guard purchase.outcome == .active else { return }
+
         purchase.outcome = outcome
         purchase.archivedAt = .now
         NotificationManager.cancelReturnReminders(for: purchase)
@@ -325,15 +474,16 @@ private struct DetailMetric: View {
             Image(systemName: icon)
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
             Text(value)
                 .font(.headline)
-                .lineLimit(1)
-                .minimumScaleFactor(0.72)
+                .monospacedDigit()
             Text(title)
                 .font(.caption2)
                 .foregroundStyle(.secondary)
-                .lineLimit(1)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
     }
 }
