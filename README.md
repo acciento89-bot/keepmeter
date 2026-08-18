@@ -13,6 +13,19 @@ The app combines:
 - return deadline
 - an explainable KEEP / REVIEW / RETURN recommendation
 
+## Current MVP surface
+
+- 3-step onboarding
+- active-purchase dashboard
+- add-purchase flow
+- one-tap usage logging
+- explainable decision detail
+- archive for kept/returned purchases
+- lightweight insights dashboard
+- Settings / Pro management
+- local return-deadline reminders
+- German + English localization
+
 ## Product principles
 
 - Native SwiftUI
