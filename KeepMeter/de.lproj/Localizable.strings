@@ -58,6 +58,7 @@
 "Close" = "Schließen";
 "Purchase verification failed." = "Die Kaufprüfung ist fehlgeschlagen.";
 "The purchase is pending approval." = "Der Kauf wartet noch auf Freigabe.";
+"Lifetime Pro is currently unavailable." = "Lifetime Pro ist momentan nicht verfügbar. Bitte versuche es gleich noch einmal.";
 "Return window reminder" = "Rückgabefrist-Erinnerung";
 "Insights" = "Auswertung";
 "Settings" = "Einstellungen";
@@ -97,3 +98,7 @@
 "KeepMeter gives you a signal. You stay in control." = "KeepMeter liefert dir ein Signal. Die Entscheidung bleibt bei dir.";
 "Start the decision clock" = "Entscheidungszeitraum starten";
 "Add the real return deadline, then track how often the purchase earns its place." = "Trage die echte Rückgabefrist ein und tracke anschließend, wie oft sich der Kauf wirklich bewährt.";
+"notification.returnWindow.title" = "Rückgabefrist-Erinnerung";
+"notification.returnWindow.today" = "Heute endet die Rückgabefrist für %@. Öffne KeepMeter und entscheide, ob du den Kauf behalten möchtest.";
+"notification.returnWindow.tomorrow" = "Die Rückgabefrist für %@ endet morgen. Prüfe vor deiner Entscheidung noch einmal die Nutzung.";
+"notification.returnWindow.days" = "Die Rückgabefrist für %@ endet in %ld Tagen. Prüfe, ob sich der Kauf für dich wirklich bewährt.";
