@@ -119,3 +119,5 @@
 "Notification status could not be determined." = "Der Mitteilungsstatus konnte nicht ermittelt werden.";
 "dashboard.urgentCount" = "%ld Kauf/Käufe brauchen innerhalb der nächsten drei Tage deine Aufmerksamkeit.";
 "The purchase could not be saved. Please try again." = "Der Kauf konnte nicht gespeichert werden. Bitte versuche es erneut.";
+"Couldn't save change" = "Änderung konnte nicht gespeichert werden";
+"Your change couldn't be saved. Please try again." = "Deine Änderung konnte nicht gespeichert werden. Bitte versuche es erneut.";
