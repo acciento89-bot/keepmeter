@@ -40,7 +40,7 @@ enum NotificationManager {
             }
 
             let content = UNMutableNotificationContent()
-            content.title = String(localized: "Return window reminder")
+            content.title = NSLocalizedString("notification.returnWindow.title", comment: "Return deadline notification title")
             content.body = reminderBody(for: purchase.name, daysBefore: reminder.daysBefore)
             content.sound = .default
 
@@ -71,11 +71,33 @@ enum NotificationManager {
     private static func reminderBody(for name: String, daysBefore: Int) -> String {
         switch daysBefore {
         case 0:
-            return String(localized: "Today is the return deadline for \(name). Open KeepMeter and decide whether to keep it.")
+            return String(
+                format: NSLocalizedString(
+                    "notification.returnWindow.today",
+                    comment: "Body for a notification fired on the return deadline; %@ is the purchase name"
+                ),
+                locale: Locale.current,
+                name
+            )
         case 1:
-            return String(localized: "The return window for \(name) ends tomorrow. Check its usage before deciding.")
+            return String(
+                format: NSLocalizedString(
+                    "notification.returnWindow.tomorrow",
+                    comment: "Body for a notification one day before the return deadline; %@ is the purchase name"
+                ),
+                locale: Locale.current,
+                name
+            )
         default:
-            return String(localized: "The return window for \(name) ends in \(daysBefore) days. Check whether the purchase is earning its place.")
+            return String(
+                format: NSLocalizedString(
+                    "notification.returnWindow.days",
+                    comment: "Body for a return notification; first %@ is the purchase name and %ld is the number of days remaining"
+                ),
+                locale: Locale.current,
+                name,
+                daysBefore
+            )
         }
     }
 }
