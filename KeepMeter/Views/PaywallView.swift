@@ -2,6 +2,7 @@ import SwiftUI
 
 struct PaywallView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @EnvironmentObject private var entitlementStore: EntitlementStore
 
     var body: some View {
@@ -38,27 +39,30 @@ struct PaywallView: View {
             ZStack {
                 Circle()
                     .fill(KMTheme.accent.opacity(0.10))
-                    .frame(width: 142, height: 142)
+                    .frame(width: dynamicTypeSize.isAccessibilitySize ? 108 : 142, height: dynamicTypeSize.isAccessibilitySize ? 108 : 142)
 
                 Circle()
                     .stroke(KMTheme.accent.opacity(0.16), lineWidth: 1)
-                    .frame(width: 116, height: 116)
+                    .frame(width: dynamicTypeSize.isAccessibilitySize ? 88 : 116, height: dynamicTypeSize.isAccessibilitySize ? 88 : 116)
 
                 Image(systemName: "gauge.with.dots.needle.67percent")
-                    .font(.system(size: 54, weight: .semibold))
+                    .font(.system(size: dynamicTypeSize.isAccessibilitySize ? 40 : 54, weight: .semibold))
                     .symbolRenderingMode(.hierarchical)
                     .foregroundStyle(KMTheme.accent)
             }
+            .accessibilityHidden(true)
 
             VStack(spacing: 8) {
                 Text(String(localized: "KeepMeter Pro"))
-                    .font(.system(size: 34, weight: .bold, design: .rounded))
+                    .font(.largeTitle.bold())
+                    .multilineTextAlignment(.center)
 
                 Text(String(localized: "Track more than five active purchases with a one-time Lifetime Pro unlock."))
                     .font(.body)
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: 350)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             Text(String(localized: "One purchase. No subscription."))
@@ -67,6 +71,7 @@ struct PaywallView: View {
                 .padding(.horizontal, 13)
                 .padding(.vertical, 7)
                 .background(KMTheme.success.opacity(0.10), in: Capsule())
+                .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.top, 8)
     }
@@ -114,23 +119,33 @@ struct PaywallView: View {
                         ProgressView()
                             .tint(.white)
                     } else if let product = entitlementStore.lifetimeProduct {
-                        HStack {
-                            Text(String(localized: "Unlock Lifetime Pro"))
-                            Spacer()
-                            Text(product.displayPrice)
+                        if dynamicTypeSize.isAccessibilitySize {
+                            VStack(spacing: 5) {
+                                Text(String(localized: "Unlock Lifetime Pro"))
+                                Text(product.displayPrice)
+                                    .monospacedDigit()
+                            }
+                        } else {
+                            HStack {
+                                Text(String(localized: "Unlock Lifetime Pro"))
+                                Spacer()
+                                Text(product.displayPrice)
+                                    .monospacedDigit()
+                            }
                         }
                     } else {
                         HStack {
                             Text(String(localized: "Load Lifetime Pro"))
                             Spacer()
                             Image(systemName: "arrow.clockwise")
+                                .accessibilityHidden(true)
                         }
                     }
                 }
                 .font(.headline)
                 .padding(.horizontal, 18)
+                .padding(.vertical, 16)
                 .frame(maxWidth: .infinity)
-                .frame(height: 56)
                 .foregroundStyle(.white)
                 .background(
                     LinearGradient(
@@ -143,6 +158,7 @@ struct PaywallView: View {
                 .shadow(color: KMTheme.accent.opacity(0.20), radius: 14, y: 8)
             }
             .buttonStyle(.plain)
+            .disabled(entitlementStore.isLoading)
 
             Button(String(localized: "Restore purchases")) {
                 Task {
@@ -154,6 +170,7 @@ struct PaywallView: View {
             }
             .font(.subheadline.weight(.semibold))
             .foregroundStyle(KMTheme.accent)
+            .disabled(entitlementStore.isLoading)
 
             if let error = entitlementStore.lastErrorMessage {
                 Label(error, systemImage: "exclamationmark.triangle.fill")
@@ -163,12 +180,13 @@ struct PaywallView: View {
                     .padding(12)
                     .frame(maxWidth: .infinity)
                     .background(KMTheme.warning.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .accessibilityElement(children: .combine)
             }
         }
     }
 
     private func benefitRow(icon: String, title: String, tint: Color) -> some View {
-        HStack(spacing: 13) {
+        HStack(alignment: .top, spacing: 13) {
             ZStack {
                 RoundedRectangle(cornerRadius: 11, style: .continuous)
                     .fill(tint.opacity(0.11))
@@ -177,12 +195,15 @@ struct PaywallView: View {
                     .foregroundStyle(tint)
             }
             .frame(width: 36, height: 36)
+            .accessibilityHidden(true)
 
             Text(title)
                 .font(.subheadline.weight(.semibold))
+                .fixedSize(horizontal: false, vertical: true)
 
-            Spacer()
+            Spacer(minLength: 0)
         }
         .padding(.vertical, 13)
+        .accessibilityElement(children: .combine)
     }
 }
