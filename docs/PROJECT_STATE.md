@@ -1,22 +1,22 @@
 # KeepMeter — Project State
 
 Last updated: 2026-08-18
-Status: ACTIVE — RELEASE PREFLIGHT GREEN / FINAL BRANDING OPEN
+Status: ACTIVE — V1 BRAND LOCKED / FINAL APP ICON OPEN
 Repository: `acciento89-bot/keepmeter`
 Default branch: `main`
-Current verified checkpoint: `5582461de995c8954f44b78c3314b3dbf2ee22c2`
+Current verified checkpoint: `eaadd52c37ce38e98e3ad96a55bda4eaea84291a`
 
 ## Handoff rule
 
-This file is the authoritative and sufficient ongoing project state for KeepMeter.
+This file is the authoritative ongoing project state for KeepMeter.
 
 For future KeepMeter work:
 
 1. Read this file first.
-2. Inspect current `main`, open PRs and CI state.
+2. Inspect current `main`, open PRs and CI.
 3. Continue from the recorded next steps.
-4. Update this file after each major pass.
-5. Do not require a parallel update in the external App Factory master repository for normal KeepMeter development.
+4. Update this file after every major pass.
+5. Normal KeepMeter work is documented here; no parallel App Factory state update is required.
 
 ## Product thesis
 
@@ -24,274 +24,261 @@ For future KeepMeter work:
 
 Core loop: **Bought -> Use -> Measure -> Decide before deadline.**
 
-## Locked MVP
+## Locked v1 product
 
-- Add purchase with name, price, purchase date and return deadline.
+- Add purchase with name, price, purchase date and user-confirmed return deadline.
 - Active purchases ordered by urgency.
 - One-tap usage logging.
 - Cost per use.
-- Return-window countdown.
+- Return-window countdown/progress.
 - Explainable KEEP / REVIEW / RETURN? signal.
 - Local return reminders.
 - Archive as kept or returned.
 - German + English.
-- Free tier: max 5 active purchases.
-- Lifetime Pro via StoreKit 2; no subscription in v1.
+- Free tier: maximum 5 active purchases.
+- Lifetime Pro: unlimited active purchases via StoreKit 2 non-consumable.
+- No subscription in v1.
 - 3-page onboarding.
 - Lightweight Insights.
 - Settings with Pro/restore, privacy, notification controls and onboarding reset.
 
-## Native stack
+## Native stack / target
 
 - SwiftUI
 - SwiftData
 - UserNotifications
 - StoreKit 2
 - iOS 17+
-- GitHub Actions simulator-build validation
+- iPhone target
+- Bundle ID: `de.kamilunavo.keepmeter`
+- Marketing version: `0.1.0`
+- Build: `1`
+- App category: Utilities
+- Generated Info.plist
+- GitHub Actions validates StoreKit, release settings, persistence, Debug and Release simulator builds
 
-## Implemented and compiling
+## Data integrity / persistence
 
-### Core product
+Implemented:
 
-- Native `KeepMeter.xcodeproj` + shared scheme.
-- Provisional bundle ID `de.kamilunavo.keepmeter`.
-- Version scaffold `0.1.0 (1)`.
 - `Purchase` + `UsageEvent` SwiftData models.
 - Active / kept / returned outcomes.
-- Dashboard, Add Purchase, Purchase Detail, Archive.
-- Cost-per-use and return-window calculations.
-- Deterministic explainable DecisionEngine.
-- Local reminders at 3 days, 1 day and deadline day where applicable.
-- Reminder cancellation when a purchase is completed.
-- Main tabs: Active / Insights / Archive / Settings.
+- Archived purchases are read-only in detail view.
+- Archived purchases do not expose usage logging or final-decision buttons.
+- Archived purchases display the stored outcome rather than a newly recalculated live recommendation.
+- Active-state guards protect purchase mutations.
+- Purchase creation, usage logging and final keep/return actions use explicit save handling.
+- Failed saves roll back and surface localized errors instead of silently succeeding.
+- Return reminders are scheduled only after successful purchase persistence.
+- Existing reminders are cancelled only after the final archived state successfully persists.
+- `ci/PersistenceSmoke.swift` writes the real models to a file-backed store, destroys the first container, reopens the same store and verifies IDs, fields, dates, outcome, usage relationship and derived cost per use.
 
-### Data-integrity / persistence hardening
+Validated:
 
-- Archived purchases are read-only in Purchase Detail.
-- Archived purchases no longer show active usage logging or final-decision controls.
-- Archived purchases no longer display a newly recalculated live DecisionEngine recommendation; the stored final outcome is shown instead.
-- Active-state guards protect usage/final-decision mutations even if UI state regresses later.
-- Creating a purchase no longer swallows SwiftData save failures.
-- Failed creation saves roll back and show a localized error.
-- Usage logging on Dashboard and Purchase Detail now saves explicitly; failed saves roll back and surface a localized error instead of showing false success.
-- Final keep/return decisions now save explicitly and roll back on failure.
-- Return reminders are scheduled only after a purchase successfully persists.
-- Existing return reminders are cancelled only after the final archived outcome successfully persists.
-- `ci/PersistenceSmoke.swift` uses the real `Purchase` and `UsageEvent` models with a file-backed SwiftData store.
-- CI writes a purchase, usage relationship and archived outcome, destroys the first container, reopens the same store, then verifies IDs, fields, dates, relationship, outcome and derived cost-per-use.
+- executable file-backed write -> reopen persistence gate is green.
 
-Important: executable file-backed persistence reopen is CI-green. A physical iPhone terminate/relaunch session remains a separate runtime QA gate and must not be claimed as completed yet.
+Not yet claimed:
 
-### Monetization / local StoreKit testing
+- physical iPhone force-quit -> relaunch persistence session.
 
-- Product ID: `de.kamilunavo.keepmeter.pro.lifetime`.
-- Free tier: maximum 5 active purchases; completed purchases do not count.
-- Lifetime Pro unlocks unlimited active purchases; no subscription in v1.
-- Local configuration: `KeepMeter/StoreKit/KeepMeter.storekit`.
-- One non-consumable Lifetime product with exact production product ID.
-- Local test price: 9.99; not a locked App Store price tier.
-- DE/EN StoreKit metadata.
-- Shared Debug Run scheme references local StoreKit configuration.
-- CI validates JSON, product ID and scheme reference.
-- DEBUG-only Settings diagnostics show product ID, loaded state, test price, current entitlement and reload/refresh controls.
-- Missing product and first-tap loading behavior are hardened.
+## StoreKit / monetization
 
-Important: local StoreKit is structurally/compile validated, but the interactive Free -> Pro -> restore sequence has not yet been clicked through in Xcode/Simulator/device.
+- Lifetime product ID: `de.kamilunavo.keepmeter.pro.lifetime`.
+- Free limit: 5 active purchases.
+- Completed purchases do not count against the free limit.
+- Lifetime Pro unlocks unlimited active purchases.
+- Local StoreKit configuration: `KeepMeter/StoreKit/KeepMeter.storekit`.
+- Local product type: NonConsumable.
+- Local test price: 9.99; this does not lock the final App Store price.
+- DE/EN local product metadata exists.
+- Shared Debug scheme references the local StoreKit configuration.
+- CI validates StoreKit JSON, exact product ID and scheme reference.
+- DEBUG-only Settings diagnostics expose product ID, loaded state, test price, entitlement and reload/refresh controls.
+- Missing-product / first-tap purchase loading behavior is hardened.
 
-### Notifications
+Not yet claimed:
 
-- Dynamic reminder copy uses stable format localization keys.
-- DE/EN purchase-name and days-remaining interpolation is fixed.
+- interactive local StoreKit Free -> Pro -> restore run.
+- App Store Connect Lifetime IAP creation.
+- sandbox/TestFlight purchase/restore run.
+
+## Notifications
+
+Implemented:
+
+- local reminders around the entered return deadline.
+- stable DE/EN format localization for dynamic reminder copy.
 - Settings reads current `UNAuthorizationStatus`.
-- Permission can be requested from Settings.
-- Denied permission offers direct iOS Settings handoff.
-- Status refreshes when the app becomes active again.
+- permission can be requested from Settings.
+- denied state offers iOS Settings handoff.
+- notification status refreshes when the app becomes active again.
 
-### Visual / accessibility hardening
+Not yet claimed:
 
-- Polished visual language covers Onboarding, Dashboard, Add Purchase, Purchase Detail, Insights, Archive, Settings and Paywall.
-- Dashboard, Purchase Detail, Archive and Insights switch to stacked/adaptive layouts at Accessibility Dynamic Type sizes.
-- Insights grid reduces from two columns to one for accessibility sizes.
-- Onboarding reduces decorative artwork footprint at accessibility sizes so content remains readable.
-- Paywall purchase layout adapts at accessibility sizes.
-- Fixed-height text controls were replaced with content-driven vertical padding where clipping was possible.
-- Decorative icons are hidden from VoiceOver where appropriate.
-- Major cards/metrics use improved accessibility grouping.
-- Return-window progress exposes an accessibility value.
-- Runtime-count localization in the dashboard uses a stable format key.
+- actual delivery of a scheduled notification on a physical device.
 
-A real-device VoiceOver and visual light/dark inspection is still open; do not claim runtime accessibility QA is complete yet.
+## Visual / accessibility system
 
-### Release validation / App Store preflight
+Implemented:
 
-- CI compiles both Debug and Release configurations for the generic iOS Simulator.
-- `ci/release-preflight.sh` reads Xcode Release build settings and asserts the expected configuration values before app compilation.
-- Preflight currently verifies:
-  - `CONFIGURATION = Release`
+- polished native visual system across Onboarding, Dashboard, Add Purchase, Purchase Detail, Insights, Archive, Settings and Paywall.
+- adaptive app background and material cards.
+- blue KeepMeter primary accent with semantic green/orange/red decision states.
+- return-window progress treatment.
+- strong metric hierarchy and decision hero treatment.
+- accessibility-size adaptive layouts on Dashboard, Detail, Archive, Insights, Onboarding and Paywall.
+- one-column Insights layout at accessibility Dynamic Type sizes.
+- content-driven button heights where fixed heights could clip.
+- decorative imagery hidden from VoiceOver where appropriate.
+- key cards/metrics use improved accessibility grouping.
+- return-window progress exposes an accessibility value.
+
+Not yet claimed:
+
+- complete runtime Light/Dark visual inspection.
+- physical/runtime VoiceOver pass.
+
+## V1 brand lock
+
+Public working brand for production design/App Store preparation: **KeepMeter**.
+
+Status: **operational v1 brand lock, not legal trademark clearance**.
+
+Current search conclusion on 2026-08-18:
+
+- no obvious exact same-name consumer app/software result surfaced in the web/App Store/Play searches performed.
+- search-engine absence is not a trademark clearance.
+- EUIPO recommends searching identical and similar signs with relevant goods/services in TMview/eSearch; a no-result search does not eliminate opposition risk.
+- formal EUIPO/DPMA/domain/legal clearance is not claimed.
+
+Locked visual direction lives in `docs/BRAND_DIRECTION.md`.
+
+Brand rules:
+
+- primary blue: approximately `#306BF5`.
+- soft blue: approximately `#63A1FF`.
+- green reserved for positive/KEEP meaning.
+- custom minimal **decision meter** is the locked AppIcon direction.
+- concept: meter/gauge arc + clear indicator + subtle integrated positive decision cue.
+- no text or `K` monogram in the primary icon.
+- no shopping-cart, receipt-vault, bank/crypto, generic AI sparkle or red-heavy identity.
+- no direct export of an SF Symbol as the final icon.
+- icon must remain recognizable at small iOS sizes and use an opaque background.
+
+## Release / App Store preflight
+
+- `ci/release-preflight.sh` reads Xcode Release build settings as source of truth.
+- It currently hard-checks:
+  - Release configuration
   - bundle ID `de.kamilunavo.keepmeter`
-  - semantic marketing version `0.1.0`
+  - marketing version `0.1.0`
   - positive build number `1`
-  - generated Info.plist enabled
-  - iOS deployment target `17.0`
+  - generated Info.plist
+  - iOS 17.0 deployment target
   - iPhone device family
   - display name `KeepMeter`
   - Utilities category
-- The preflight intentionally reports the missing final AppIcon asset catalog as a Release blocker warning rather than pretending it exists.
-- `docs/APP_STORE_RELEASE.md` now centralizes technical App Store values, App Store Connect blockers, DE/EN listing drafts, privacy constraints, screenshot plan and runtime submission checklist.
-- Release simulator compilation is not a signed Archive and does not replace the first real TestFlight archive/upload gate.
+- Current AppIcon absence is deliberately emitted as a Release blocker warning.
+- `docs/APP_STORE_RELEASE.md` contains the App Store Connect checklist, DE/EN listing drafts, privacy constraints, screenshot plan and runtime submission checklist.
+- Debug and Release simulator builds are both CI-gated.
+- A simulator Release build is not a signed Archive and does not replace TestFlight validation.
 
-### Current release asset blocker
+## Current release blocker
 
-- No final `Assets.xcassets/AppIcon.appiconset` is configured yet.
-- Final AppIcon remains blocked on sufficiently safe public-name/branding lock.
-- Once the final AppIcon is added, the preflight should be changed from warning to hard failure if the icon asset is missing or misconfigured.
+**Final AppIcon / asset catalog is still missing.**
 
-## Verified build gates
+There is currently no final `KeepMeter/Assets.xcassets/AppIcon.appiconset` wired to the target.
 
-### Gate 1 — Functional MVP
-- PR #1
-- Workflow `32178808223`
-- SUCCESS
-- Merge `bf024336455d2a65da1e7d5f25ac87f142a3de8d`
+After final artwork is available:
 
-### Gate 2 — Visual polish
-- PR #2
-- Workflow `32179763750`
-- SUCCESS
-- Merge `45c53308ae41fc38eec5049c0181d4b0d7ede42b`
+1. add `Assets.xcassets` + `AppIcon.appiconset`.
+2. wire `ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon` for Debug + Release.
+3. change the AppIcon preflight warning to a hard CI failure.
+4. run full StoreKit -> preflight -> persistence -> Debug -> Release CI again.
 
-### Gate 3 — StoreKit / reminder hardening
-- PR #3
-- Workflow `32182015862`
-- SUCCESS
-- Merge `0ec1e7b87fb3148462fcdc923770684e9bf67f1f`
+## Verified gates
 
-### Gate 4 — Notification QA controls
-- PR #4
-- Workflow `32182418696`
-- SUCCESS
-- Merge `e82813b2f53677112700c5f0cdbcb0db6a9402c7`
+1. Gate 1 — Functional MVP — PR #1 — workflow `32178808223` — merge `bf024336455d2a65da1e7d5f25ac87f142a3de8d` — GREEN.
+2. Gate 2 — Visual polish — PR #2 — workflow `32179763750` — merge `45c53308ae41fc38eec5049c0181d4b0d7ede42b` — GREEN.
+3. Gate 3 — StoreKit/reminder hardening — PR #3 — workflow `32182015862` — merge `0ec1e7b87fb3148462fcdc923770684e9bf67f1f` — GREEN.
+4. Gate 4 — Notification QA controls — PR #4 — workflow `32182418696` — merge `e82813b2f53677112700c5f0cdbcb0db6a9402c7` — GREEN.
+5. Gate 5 — Local StoreKit environment — PR #5 — workflow `32184529919` — merge `f9541c26a4ea63b78c302977a95566827c37b45f` — GREEN.
+6. Gate 6 — Data integrity/accessibility hardening — PR #6 — workflow `32185398795` — merge `f3718152acbd7b51ba90bbb399e3de6fc1116d64` — GREEN.
+7. Gate 7 — File-backed SwiftData reopen — PR #7 — workflow `32186180485` — merge `2b93368f084ccf4808a0fa2a5e68c5d7dc51bc0c` — GREEN.
+8. Gate 8 — Release configuration compile — PR #8 — workflow `32186439191` — merge `dad79a620f375ed2c5eaa9ce4d40784130aab164` — GREEN.
+9. Gate 9 — App Store release preflight — PR #9 — workflow `32186964254` — merge `5582461de995c8954f44b78c3314b3dbf2ee22c2` — GREEN.
+10. Gate 10 — v1 brand direction lock — PR #10 — workflow `32187367731` — merge `eaadd52c37ce38e98e3ad96a55bda4eaea84291a` — GREEN.
 
-### Gate 5 — Local StoreKit test environment
-- PR #5
-- Workflow `32184529919`
-- StoreKit validation + full simulator build: SUCCESS
-- Merge `f9541c26a4ea63b78c302977a95566827c37b45f`
-
-### Gate 6 — Data integrity / accessibility hardening
-- PR #6 `Harden data integrity and accessibility`
-- Workflow `32185398795`
-- StoreKit validation: SUCCESS
-- Full iOS Simulator build: SUCCESS
-- Merge `f3718152acbd7b51ba90bbb399e3de6fc1116d64`
-
-### Gate 7 — SwiftData persistence reopen
-- PR #7 `Add SwiftData persistence reopen gate`
-- Workflow `32186180485`
-- StoreKit validation: SUCCESS
-- File-backed SwiftData write -> container destroy -> reopen verification: SUCCESS
-- Full iOS Simulator Debug build: SUCCESS
-- Merge `2b93368f084ccf4808a0fa2a5e68c5d7dc51bc0c`
-
-### Gate 8 — Release configuration compile
-- PR #8 `Add Release configuration build gate`
-- Workflow `32186439191`
-- StoreKit validation: SUCCESS
-- SwiftData persistence reopen: SUCCESS
-- Full iOS Simulator Debug build: SUCCESS
-- Full iOS Simulator Release build: SUCCESS
-- Merge `dad79a620f375ed2c5eaa9ce4d40784130aab164`
-
-### Gate 9 — App Store release preflight
-- PR #9 `Add App Store release preflight`
-- Workflow `32186964254`
-- StoreKit validation: SUCCESS
-- App Store Release build-setting preflight: SUCCESS
-- SwiftData persistence reopen: SUCCESS
-- Full iOS Simulator Debug build: SUCCESS
-- Full iOS Simulator Release build: SUCCESS
-- Merge `5582461de995c8954f44b78c3314b3dbf2ee22c2`
-
-Major source passes must remain CI-green before merge/TestFlight.
+Major product/source/design passes must remain CI-green before merge/TestFlight.
 
 ## DecisionEngine v1
 
-- deadline passed -> REVIEW
-- zero uses and <= 3 days remaining -> RETURN?
-- <= 1 use and <= 3 days remaining -> REVIEW
-- zero uses after >= 60% of return window -> REVIEW
-- >= 3 logged uses -> KEEP signal
-- early window -> REVIEW / collect more signal
-- otherwise -> REVIEW / more evidence needed
+- deadline passed -> REVIEW.
+- zero uses and <= 3 days remaining -> RETURN?.
+- <= 1 use and <= 3 days remaining -> REVIEW.
+- zero uses after >= 60% of return window -> REVIEW.
+- >= 3 logged uses -> KEEP signal.
+- early window -> REVIEW / collect more signal.
+- otherwise -> REVIEW / more evidence needed.
 
-Cost per use is informative only; it does not pretend a universal price threshold defines personal value.
+Cost per use is informative only; there is no pretend universal monetary threshold for personal value.
 
-## Guardrails
+## Guardrails / rejected directions
 
-- No account/backend for core v1.
-- No bank connection.
-- No inbox scraping.
-- No generic receipt/warranty-vault positioning.
-- No forced subscription.
-- No opaque AI recommendation.
-- User-entered return dates are informational and not represented as guaranteed legal rights.
+- no account/backend for core v1.
+- no bank connection.
+- no inbox scraping.
+- no generic receipt/warranty-vault positioning.
+- no forced subscription.
+- no opaque AI recommendation.
+- user-entered return dates are informational and are not represented as guaranteed legal rights.
+- no generic shopping-cart/receipt/bank/AI-sparkle AppIcon direction.
 
 ## QA / release status
 
-GREEN / STRUCTURALLY VALIDATED:
-- functional simulator compile
-- full visual-polish compile
-- StoreKit/reminder hardening compile
-- notification-controls compile
-- local StoreKit config / product ID / scheme validation
-- data-integrity + Dynamic Type/accessibility source hardening compile
-- file-backed SwiftData persistence write/reopen verification
-- mutation save failures rollback instead of silently succeeding
-- App Store-facing Release build-setting preflight
-- full Debug simulator compilation
-- full Release simulator compilation
+GREEN / structurally validated:
+
+- functional simulator compile.
+- visual-polish compile.
+- StoreKit/reminder hardening compile.
+- notification-controls compile.
+- local StoreKit config/product ID/scheme validation.
+- data-integrity + Dynamic Type/accessibility source hardening compile.
+- file-backed SwiftData write/reopen verification.
+- mutation save rollback behavior in source paths.
+- App Store-facing Release build-setting preflight.
+- full Debug simulator compilation.
+- full Release simulator compilation.
+- v1 visual/brand direction documented and CI-gated.
 
 Still not explicitly exercised end-to-end:
-- physical-device QA
-- physical terminate/relaunch persistence behavior
-- actual local-notification delivery on device
-- interactive local StoreKit purchase session
-- Free-limit -> Lifetime Pro -> restore flow
-- visual light/dark inspection on runtime
-- VoiceOver runtime QA
+
+- physical-device QA.
+- physical terminate/relaunch persistence behavior.
+- actual local-notification delivery on device.
+- interactive local StoreKit purchase session.
+- Free-limit -> Lifetime Pro -> restore flow.
+- runtime light/dark inspection.
+- runtime VoiceOver QA.
 
 Release:
-- no TestFlight build yet
-- no App Store submission yet
-- final AppIcon missing
-- matching Lifetime IAP still needs App Store Connect configuration before sandbox/TestFlight purchase testing
-- signed Archive/export/upload has not yet been exercised
 
-## Naming
+- no TestFlight build yet.
+- no App Store submission yet.
+- final AppIcon missing.
+- matching Lifetime IAP still needs App Store Connect configuration.
+- signed Archive/export/upload has not yet been exercised.
 
-Working name: `KeepMeter`.
-Status: PROVISIONAL.
-A stronger web exact-name check on 2026-08-18 did not surface an obvious exact consumer-app/software result in the searches performed. EUIPO itself recommends checking identical and similar marks in TMview/eSearch before filing; search-engine absence is not formal trademark clearance. Formal EUIPO/DPMA/domain clearance is still not recorded and the public name is not locked.
+## App Store Connect tooling constraint
 
-## Still open for MVP
-
-1. Continue name/domain/trademark due diligence far enough to lock public branding.
-2. Design/add final AppIcon asset catalog and convert AppIcon preflight warning into a hard CI gate.
-3. Exercise local StoreKit purchase and restore interactively in Xcode/Simulator.
-4. Create/configure matching Lifetime IAP in App Store Connect.
-5. Physical terminate/relaunch persistence QA.
-6. Notification delivery QA on device.
-7. Free-limit / purchase / restore runtime QA.
-8. Dedicated runtime light/dark inspection and fixes.
-9. VoiceOver runtime QA.
-10. First signed TestFlight archive/upload.
+No App Store Connect / Apple Developer write connector was available in the installed plugin search on 2026-08-18. Creating the actual App Store Connect app/IAP record or uploading through Apple may therefore require an authenticated local Xcode/App Store Connect step rather than a repository-only action.
 
 ## Immediate next steps
 
-1. Perform final-enough EUIPO/DPMA/domain due diligence for `KeepMeter` and decide whether public branding can be locked.
-2. Create the final AppIcon/visual identity, add `Assets.xcassets`, wire `ASSETCATALOG_COMPILER_APPICON_NAME`, and make CI fail if AppIcon is missing.
-3. Configure Lifetime IAP in App Store Connect.
-4. Exercise StoreKit, persistence and notification flows on Xcode/device runtime.
-5. Perform final light/dark + VoiceOver runtime inspection.
-6. Prepare the first signed TestFlight build only after those runtime gates are green.
+1. Create final 1024x1024 AppIcon artwork from `docs/BRAND_DIRECTION.md`.
+2. Add and wire the AppIcon asset catalog; turn icon preflight into a hard CI gate.
+3. Configure the Lifetime IAP in App Store Connect.
+4. Exercise interactive StoreKit Free -> Pro -> restore.
+5. Exercise physical-device persistence and notification delivery.
+6. Perform final runtime light/dark + VoiceOver inspection.
+7. Run first signed Archive and TestFlight upload only after the runtime gates are green.
