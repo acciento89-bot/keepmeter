@@ -4,7 +4,7 @@ Last updated: 2026-08-18
 Status: ACTIVE — POLISHED MVP + QA HARDENING GREEN
 Repository: `acciento89-bot/keepmeter`
 Default branch: `main`
-Current verified checkpoint: `0ec1e7b87fb3148462fcdc923770684e9bf67f1f`
+Current verified checkpoint: `e82813b2f53677112700c5f0cdbcb0db6a9402c7`
 
 ## Handoff rule
 
@@ -13,37 +13,33 @@ This file is the authoritative and sufficient ongoing project state for KeepMete
 For future KeepMeter work:
 
 1. Read this file first.
-2. Inspect current `main` / open PR / CI state.
+2. Inspect current `main`, open PRs and CI state.
 3. Continue from the recorded next steps.
 4. Update this file after each major pass.
-5. Do **not** require a parallel update in the external App Factory master repository for normal KeepMeter development.
+5. Do not require a parallel update in the external App Factory master repository for normal KeepMeter development.
 
 ## Product thesis
 
-KeepMeter answers one focused question:
-
 > Is this purchase actually worth keeping before the return window closes?
 
-Core loop:
-
-**Bought -> Use -> Measure -> Decide before deadline.**
+Core loop: **Bought -> Use -> Measure -> Decide before deadline.**
 
 ## Locked MVP
 
-1. Add a purchase with name, price, purchase date and return deadline.
-2. Show active purchases ordered by urgency.
-3. Log a usage with one tap.
-4. Calculate cost per use.
-5. Show days remaining in the return window.
-6. Produce an explainable KEEP / REVIEW / RETURN recommendation.
-7. Schedule local return-deadline reminders.
-8. Archive purchases as kept or returned.
-9. German + English from the first build.
-10. Free tier: up to 5 active purchases.
-11. Lifetime Pro via StoreKit 2; no subscription in v1.
-12. First-launch onboarding explains the product loop.
-13. Lightweight Insights summarizes tracked value, usage and decisions.
-14. Settings exposes Pro status, restore flow, privacy messaging and onboarding reset.
+- Add purchase with price, purchase date and return deadline.
+- Active purchases ordered by urgency.
+- One-tap usage logging.
+- Cost per use.
+- Return-window countdown.
+- Explainable KEEP / REVIEW / RETURN? signal.
+- Local return reminders.
+- Archive as kept or returned.
+- German + English.
+- Free tier: max 5 active purchases.
+- Lifetime Pro via StoreKit 2; no subscription in v1.
+- 3-page onboarding.
+- Lightweight Insights.
+- Settings with Pro/restore, privacy, notification controls and onboarding reset.
 
 ## Native stack
 
@@ -52,110 +48,100 @@ Core loop:
 - UserNotifications
 - StoreKit 2
 - iOS 17+
-- GitHub Actions iOS Simulator build validation
+- GitHub Actions simulator-build validation
 
 ## Implemented and compiling
 
 ### Core product
 
-- Native `KeepMeter.xcodeproj` and shared scheme.
+- Native `KeepMeter.xcodeproj` + shared scheme.
 - Provisional bundle ID `de.kamilunavo.keepmeter`.
 - Version scaffold `0.1.0 (1)`.
-- SwiftData `Purchase` and `UsageEvent` models.
+- `Purchase` + `UsageEvent` SwiftData models.
 - Active / kept / returned outcomes.
+- Dashboard, Add Purchase, Purchase Detail, Archive.
 - Cost-per-use and return-window calculations.
-- Deterministic, explainable KEEP / REVIEW / RETURN? engine.
-- Dashboard, Add Purchase, Purchase Detail and Archive.
-- One-tap usage logging.
-- Local return reminders at 3 days, 1 day and deadline day when applicable.
+- Deterministic explainable DecisionEngine.
+- Local reminders at 3 days, 1 day and deadline day where applicable.
 - Reminder cancellation when a purchase is completed.
-- 3-page onboarding.
 - Main tabs: Active / Insights / Archive / Settings.
-- Insights with tracked value, total uses, average cost/use, open decisions, kept/returned counts and best-value item.
 
 ### Monetization
 
-- StoreKit 2 entitlement service.
-- Current product ID: `de.kamilunavo.keepmeter.pro.lifetime`.
+- Product ID: `de.kamilunavo.keepmeter.pro.lifetime`.
 - Free tier: maximum 5 active purchases.
-- Completed purchases do not count against the active cap.
-- Lifetime Pro: unlimited active purchases.
+- Completed purchases do not count against the limit.
+- Lifetime Pro unlocks unlimited active purchases.
 - Purchase and restore plumbing compile.
-- No subscription in v1.
-- Lifetime purchase flow now loads a missing StoreKit product and continues the purchase on the same tap rather than silently requiring a second tap.
+- Missing product now surfaces a localized error.
+- First Lifetime tap now loads a missing product and continues the same purchase attempt rather than silently requiring a second tap.
 - Purchase/restore operations clear stale errors and expose loading state consistently.
-- Missing Lifetime product now surfaces a user-visible localized error.
 
-### Notifications / localization hardening
+### Notification hardening
 
-- Dynamic notification bodies now use stable localization format keys instead of interpolated localization keys.
-- DE/EN reminder copy supports purchase name interpolation and days remaining.
-- Reminder title also uses an explicit stable localization key.
-- This fixes the previous case where a runtime item name could prevent a localized string lookup.
+- Dynamic reminder copy now uses stable format localization keys.
+- DE/EN purchase-name and days-remaining interpolation is fixed.
+- Settings now reads current `UNAuthorizationStatus`.
+- User can request permission from Settings when not yet determined.
+- If denied, Settings offers a direct handoff to iOS Settings.
+- Notification status refreshes when the app becomes active again after visiting system settings.
+- Permission/status UI is fully localized DE/EN.
 
-### Visual system — first polish pass complete
+### Visual system
 
-PR #2 applied the first coherent KeepMeter visual language across the complete MVP surface:
+The polished MVP visual language covers Onboarding, Dashboard, Add Purchase, Purchase Detail, Insights, Archive, Settings and Paywall with:
 
-- adaptive branded app background
-- primary KeepMeter blue accent plus semantic success/warning/return colors
-- reusable material-card treatment with restrained borders/shadows
-- redesigned first-launch onboarding
-- redesigned decision dashboard and purchase cards
-- visible return-window progress on active purchases
-- clearer metric hierarchy for uses, cost/use and days remaining
-- redesigned purchase-detail decision hero
-- prominent one-tap usage action
-- redesigned final keep/return decision area
-- polished Insights dashboard
-- polished Archive
-- polished Add Purchase flow
-- polished Settings / Pro status card
-- Lifetime-first Pro paywall emphasizing one-time purchase / no subscription
-- dashboard success haptic after logging a use
-- additional DE/EN visual-copy localization
+- adaptive app background
+- KeepMeter accent + semantic status colors
+- reusable material cards with restrained border/shadow treatment
+- visible return-window progress
+- stronger metric hierarchy
+- decision hero treatment
+- prominent usage logging
+- Lifetime-first Pro presentation
+- system-aware styling intended to adapt to light/dark appearance
 
-The styling uses system-aware backgrounds/materials and semantic colors so it is structurally compatible with light and dark appearance. A dedicated manual light/dark QA pass is still open.
+Dedicated manual light/dark QA is still open.
 
 ## Verified build gates
 
-### Gate 1 — functional MVP
+### Gate 1 — Functional MVP
+- PR #1
+- Workflow `32178808223`
+- SUCCESS
+- Merge `bf024336455d2a65da1e7d5f25ac87f142a3de8d`
 
-- PR: #1 `Validate current KeepMeter MVP build`.
-- Workflow run: `32178808223`.
-- Result: SUCCESS.
-- Merge checkpoint: `bf024336455d2a65da1e7d5f25ac87f142a3de8d`.
+### Gate 2 — Visual polish
+- PR #2
+- Workflow `32179763750`
+- SUCCESS
+- Merge `45c53308ae41fc38eec5049c0181d4b0d7ede42b`
 
-### Gate 2 — visual polish
+### Gate 3 — StoreKit / reminder hardening
+- PR #3
+- Workflow `32182015862`
+- SUCCESS
+- Merge `0ec1e7b87fb3148462fcdc923770684e9bf67f1f`
 
-- PR: #2 `Polish KeepMeter MVP visual system`.
-- Workflow run: `32179763750`.
-- Full iOS Simulator `xcodebuild`: SUCCESS.
-- Merge checkpoint: `45c53308ae41fc38eec5049c0181d4b0d7ede42b`.
+### Gate 4 — Notification QA controls
+- PR #4 `Add notification QA controls`
+- Workflow `32182418696`
+- Full iOS Simulator build: SUCCESS
+- Merge `e82813b2f53677112700c5f0cdbcb0db6a9402c7`
 
-### Gate 3 — StoreKit / notification hardening
+Major source passes must remain CI-green before merge/TestFlight.
 
-- PR: #3 `Harden StoreKit and reminder localization`.
-- Workflow run: `32182015862`.
-- Full iOS Simulator `xcodebuild`: SUCCESS.
-- PR #3 squash-merged.
-- Current merge checkpoint: `0ec1e7b87fb3148462fcdc923770684e9bf67f1f`.
-
-Future major source passes must continue to use CI as a regression gate before merge/TestFlight.
-
-## Decision-engine v1
-
-Current conservative prototype rules:
+## DecisionEngine v1
 
 - deadline passed -> REVIEW
 - zero uses and <= 3 days remaining -> RETURN?
 - <= 1 use and <= 3 days remaining -> REVIEW
-- zero uses after >= 60% of the return window -> REVIEW
+- zero uses after >= 60% of return window -> REVIEW
 - >= 3 logged uses -> KEEP signal
-- early in the return window -> REVIEW / keep collecting signal
-- otherwise -> REVIEW / more signal needed
+- early window -> REVIEW / collect more signal
+- otherwise -> REVIEW / more evidence needed
 
-The UI explains the reason. Cost per use is displayed, but no universal monetary threshold pretends to define personal value.
+Cost per use is informative only; it does not pretend a universal price threshold defines personal value.
 
 ## Guardrails
 
@@ -165,45 +151,53 @@ The UI explains the reason. Cost per use is displayed, but no universal monetary
 - No generic receipt/warranty-vault positioning.
 - No forced subscription.
 - No opaque AI recommendation.
-- No claim that a user-entered return date is a guaranteed legal right; merchant policy/statutory rights may differ.
+- User-entered return dates are informational and not represented as guaranteed legal rights.
 
-## Build / QA status
+## QA / release status
 
-- Functional CI simulator build: GREEN.
-- Visual-polish CI simulator build: GREEN.
-- StoreKit/notification hardening CI simulator build: GREEN.
-- No physical-device QA yet.
-- Persistence/relaunch behavior has not yet been explicitly exercised.
-- Notification permission/delivery behavior has not yet been explicitly exercised on device.
-- StoreKit local/sandbox purchase flow has not yet been exercised end-to-end.
-- No TestFlight build uploaded yet.
-- No App Store submission yet.
+GREEN:
+- functional simulator compile
+- visual-polish simulator compile
+- StoreKit/reminder hardening compile
+- notification-controls compile
+
+Still not explicitly exercised end-to-end:
+- physical-device QA
+- persistence/relaunch behavior
+- actual local-notification delivery on device
+- StoreKit local purchase / restore session
+- free-limit -> Pro -> restore flow
+- dedicated light/dark QA
+- accessibility QA
+
+Release:
+- no TestFlight build yet
+- no App Store submission yet
 
 ## Still open for MVP
 
-- StoreKit local `.storekit` test configuration.
-- Create/configure Lifetime IAP in App Store Connect.
-- Persistence/relaunch QA.
-- Notification permission/behavior QA.
-- Free-limit / purchase / restore QA.
-- Dedicated light/dark appearance QA and fixes.
-- Accessibility pass.
-- Visual identity / final app icon.
-- Final-enough name/domain/trademark due diligence before public branding.
-- First TestFlight readiness pass and signed archive/upload.
+1. Local `.storekit` test configuration and StoreKitTest/interactive test path.
+2. Create/configure matching Lifetime IAP in App Store Connect.
+3. Persistence/relaunch QA.
+4. Notification delivery QA on device.
+5. Free-limit / purchase / restore QA.
+6. Dedicated light/dark appearance QA and fixes.
+7. Accessibility pass.
+8. Final visual identity / app icon.
+9. Final-enough name/domain/trademark due diligence before public branding.
+10. First TestFlight readiness pass and signed archive/upload.
 
 ## Naming
 
 Working name: `KeepMeter`.
-
-Status: PROVISIONAL. Preliminary market checks did not reveal an obvious exact-name consumer-app collision, but this is not formal trademark clearance and no domain reservation is recorded yet.
+Status: PROVISIONAL.
+Preliminary checks did not reveal an obvious exact-name consumer-app collision, but formal trademark clearance/domain reservation are not recorded yet.
 
 ## Immediate next steps
 
-1. Add local StoreKit testing support and exercise free -> Lifetime Pro -> restore behavior.
-2. Add better in-app visibility/control for notification authorization, then exercise scheduling/delivery on device.
-3. QA persistence/relaunch and the full decision loop.
-4. Run dedicated light/dark and accessibility passes on the polished UI.
-5. Establish final icon/visual identity once naming is strong enough to keep.
-6. Perform stronger name/domain/trademark due diligence before App Store branding is locked.
-7. Prepare first signed TestFlight build only after these QA gates are green.
+1. Add local StoreKit testing support and exercise free -> Lifetime Pro -> restore.
+2. QA persistence/relaunch and the full decision loop.
+3. Exercise notification scheduling/delivery on a real device using the new Settings diagnostics.
+4. Run light/dark and accessibility passes.
+5. Lock icon/public branding after stronger name due diligence.
+6. Prepare first signed TestFlight build only after QA gates are green.
