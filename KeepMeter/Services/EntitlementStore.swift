@@ -17,9 +17,13 @@ final class EntitlementStore: ObservableObject {
         updatesTask = Task { [weak self] in
             for await update in Transaction.updates {
                 guard let self else { return }
-                if case .verified(let transaction) = update {
-                    await transaction.finish()
-                    await self.refreshEntitlements()
+
+                switch update {
+                case .verified(let transaction):
+                    await self.processVerifiedTransaction(transaction)
+                case .unverified:
+                    // Never unlock paid features from an unverified transaction.
+                    continue
                 }
             }
         }
@@ -38,14 +42,22 @@ final class EntitlementStore: ObservableObject {
         isLoading = true
         defer { isLoading = false }
 
+        // Entitlement recovery is intentionally independent from product loading.
+        // A Lifetime Pro customer must remain Pro even when Product.products(for:)
+        // is temporarily unavailable because of network/App Store conditions.
+        await refreshEntitlements()
+        await finishUnfinishedLifetimeTransactions()
+
         do {
             lifetimeProduct = try await Product.products(for: [Self.lifetimeProductID]).first
-            await refreshEntitlements()
 
             if lifetimeProduct == nil && !isPro {
                 lastErrorMessage = String(localized: "Lifetime Pro is currently unavailable.")
             }
         } catch {
+            // Preserve the already-refreshed entitlement state. Product metadata is
+            // useful for purchasing/display price, but it must never be the source
+            // of truth for an existing non-consumable entitlement.
             lastErrorMessage = error.localizedDescription
         }
     }
@@ -72,13 +84,19 @@ final class EntitlementStore: ObservableObject {
 
             switch result {
             case .success(let verification):
-                guard case .verified(let transaction) = verification else {
-                    lastErrorMessage = String(localized: "Purchase verification failed.")
-                    return
-                }
+                switch verification {
+                case .verified(let transaction):
+                    guard transaction.productID == Self.lifetimeProductID else {
+                        lastErrorMessage = String(localized: "Purchase verification failed.")
+                        return
+                    }
 
-                await transaction.finish()
-                await refreshEntitlements()
+                    // Grant/refresh access before finishing the transaction.
+                    await processVerifiedTransaction(transaction)
+
+                case .unverified:
+                    lastErrorMessage = String(localized: "Purchase verification failed.")
+                }
 
             case .pending:
                 lastErrorMessage = String(localized: "The purchase is pending approval.")
@@ -100,8 +118,11 @@ final class EntitlementStore: ObservableObject {
         defer { isLoading = false }
 
         do {
+            // AppStore.sync() is intentionally only called from this explicit user
+            // action. Normal launches recover from currentEntitlements automatically.
             try await AppStore.sync()
             await refreshEntitlements()
+            await finishUnfinishedLifetimeTransactions()
         } catch {
             lastErrorMessage = error.localizedDescription
         }
@@ -112,11 +133,54 @@ final class EntitlementStore: ObservableObject {
 
         for await entitlement in Transaction.currentEntitlements {
             guard case .verified(let transaction) = entitlement else { continue }
-            if transaction.productID == Self.lifetimeProductID && transaction.revocationDate == nil {
+            guard transaction.productID == Self.lifetimeProductID else { continue }
+
+            // Refunded/revoked non-consumables aren't normally emitted by
+            // currentEntitlements, but keep the explicit guard for defense in depth.
+            if transaction.revocationDate == nil {
                 hasLifetime = true
             }
         }
 
         isPro = hasLifetime
+    }
+
+    private func processVerifiedTransaction(_ transaction: Transaction) async {
+        guard transaction.productID == Self.lifetimeProductID else { return }
+
+        // StoreKit recommends granting access before finish(). This also protects
+        // the narrow app-termination window between a successful purchase and the
+        // next entitlement refresh.
+        if transaction.revocationDate == nil {
+            isPro = true
+        } else {
+            isPro = false
+        }
+
+        await transaction.finish()
+        await refreshEntitlements()
+    }
+
+    private func finishUnfinishedLifetimeTransactions() async {
+        var processedTransaction = false
+
+        for await result in Transaction.unfinished {
+            guard case .verified(let transaction) = result else { continue }
+            guard transaction.productID == Self.lifetimeProductID else { continue }
+
+            processedTransaction = true
+
+            // Grant access first, then finish. This recovers a transaction if the
+            // app previously terminated after purchase but before finish().
+            if transaction.revocationDate == nil {
+                isPro = true
+            }
+
+            await transaction.finish()
+        }
+
+        if processedTransaction {
+            await refreshEntitlements()
+        }
     }
 }
