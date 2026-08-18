@@ -37,9 +37,59 @@ struct SettingsView: View {
                         } label: {
                             Label(String(localized: "Restore purchases"), systemImage: "arrow.clockwise.circle")
                         }
+                        .disabled(entitlementStore.isLoading)
                     } header: {
                         Text(String(localized: "Pro"))
                     }
+
+#if DEBUG
+                    Section("StoreKit QA") {
+                        LabeledContent("Product ID", value: EntitlementStore.lifetimeProductID)
+
+                        LabeledContent("Product") {
+                            HStack(spacing: 6) {
+                                Circle()
+                                    .fill(entitlementStore.lifetimeProduct == nil ? KMTheme.warning : KMTheme.success)
+                                    .frame(width: 8, height: 8)
+                                Text(entitlementStore.lifetimeProduct == nil ? "Not loaded" : "Loaded")
+                            }
+                        }
+
+                        if let product = entitlementStore.lifetimeProduct {
+                            LabeledContent(String(localized: "Price"), value: product.displayPrice)
+                        }
+
+                        LabeledContent("Entitlement") {
+                            Text(entitlementStore.isPro ? "Pro active" : "Free")
+                                .foregroundStyle(entitlementStore.isPro ? KMTheme.success : .secondary)
+                        }
+
+                        Button {
+                            Task {
+                                await entitlementStore.load()
+                            }
+                        } label: {
+                            Label("Reload StoreKit product", systemImage: "arrow.clockwise")
+                        }
+                        .disabled(entitlementStore.isLoading)
+
+                        Button {
+                            Task {
+                                await entitlementStore.refreshEntitlements()
+                            }
+                        } label: {
+                            Label("Refresh entitlement", systemImage: "checkmark.seal")
+                        }
+                        .disabled(entitlementStore.isLoading)
+
+                        Label(
+                            "Local KeepMeter.storekit is attached to the Debug Run scheme.",
+                            systemImage: "hammer.fill"
+                        )
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    }
+#endif
 
                     Section(String(localized: "Reminders")) {
                         HStack(spacing: 12) {
