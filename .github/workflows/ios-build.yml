@@ -24,6 +24,9 @@ jobs:
           grep -F '"productID" : "de.kamilunavo.keepmeter.pro.lifetime"' KeepMeter/StoreKit/KeepMeter.storekit >/dev/null
           grep -F '../../../KeepMeter/StoreKit/KeepMeter.storekit' KeepMeter.xcodeproj/xcshareddata/xcschemes/KeepMeter.xcscheme >/dev/null
 
+      - name: Validate App Store release settings
+        run: bash ci/release-preflight.sh
+
       - name: Exercise SwiftData persistence reopen
         run: |
           set -euo pipefail
