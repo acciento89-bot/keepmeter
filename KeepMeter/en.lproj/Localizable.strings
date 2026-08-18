@@ -58,6 +58,7 @@
 "Close" = "Close";
 "Purchase verification failed." = "Purchase verification failed.";
 "The purchase is pending approval." = "The purchase is pending approval.";
+"Lifetime Pro is currently unavailable." = "Lifetime Pro is currently unavailable. Please try again shortly.";
 "Return window reminder" = "Return window reminder";
 "Insights" = "Insights";
 "Settings" = "Settings";
@@ -97,3 +98,7 @@
 "KeepMeter gives you a signal. You stay in control." = "KeepMeter gives you a signal. You stay in control.";
 "Start the decision clock" = "Start the decision clock";
 "Add the real return deadline, then track how often the purchase earns its place." = "Add the real return deadline, then track how often the purchase earns its place.";
+"notification.returnWindow.title" = "Return window reminder";
+"notification.returnWindow.today" = "Today is the return deadline for %@. Open KeepMeter and decide whether to keep it.";
+"notification.returnWindow.tomorrow" = "The return window for %@ ends tomorrow. Check its usage before deciding.";
+"notification.returnWindow.days" = "The return window for %@ ends in %ld days. Check whether the purchase is earning its place.";
