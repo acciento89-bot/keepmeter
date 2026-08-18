@@ -48,6 +48,9 @@
             ReferencedContainer = "container:KeepMeter.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
+      <StoreKitConfigurationFileReference
+         identifier = "../../../KeepMeter/StoreKit/KeepMeter.storekit">
+      </StoreKitConfigurationFileReference>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"

@@ -1,0 +1,38 @@
+{
+  "identifier" : "4B4D4B01",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "9.99",
+      "familyShareable" : false,
+      "internalID" : "4B4D4B02",
+      "localizations" : [
+        {
+          "description" : "Unlock unlimited active purchase tracking with a one-time purchase. No subscription.",
+          "displayName" : "KeepMeter Lifetime Pro",
+          "locale" : "en_US"
+        },
+        {
+          "description" : "Schalte unbegrenzt viele aktive Käufe mit einem einmaligen Kauf frei. Kein Abo.",
+          "displayName" : "KeepMeter Lifetime Pro",
+          "locale" : "de_DE"
+        }
+      ],
+      "productID" : "de.kamilunavo.keepmeter.pro.lifetime",
+      "referenceName" : "KeepMeter Lifetime Pro",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+
+  },
+  "subscriptionGroups" : [
+
+  ],
+  "version" : {
+    "major" : 1,
+    "minor" : 1
+  }
+}

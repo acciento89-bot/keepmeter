@@ -17,6 +17,13 @@ jobs:
       - name: Show Xcode version
         run: xcodebuild -version
 
+      - name: Validate StoreKit test configuration
+        run: |
+          set -euo pipefail
+          python3 -m json.tool KeepMeter/StoreKit/KeepMeter.storekit >/dev/null
+          grep -F '"productID" : "de.kamilunavo.keepmeter.pro.lifetime"' KeepMeter/StoreKit/KeepMeter.storekit >/dev/null
+          grep -F '../../../KeepMeter/StoreKit/KeepMeter.storekit' KeepMeter.xcodeproj/xcshareddata/xcschemes/KeepMeter.xcscheme >/dev/null
+
       - name: Build KeepMeter for iOS Simulator
         run: |
           set -o pipefail
