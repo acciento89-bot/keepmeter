@@ -1,10 +1,12 @@
 # KeepMeter — Project State
 
 Last updated: 2026-08-18
-Status: ACTIVE — FIRST NATIVE IMPLEMENTATION PASS COMPLETE
+Status: ACTIVE — FIRST GREEN MVP BUILD
 Repository: `acciento89-bot/keepmeter`
 Default branch: `main`
-Latest implementation commit at this checkpoint: `92e2ea4ef203b16eadf9f2d54090213db81815c6`
+Current verified checkpoint: `bf024336455d2a65da1e7d5f25ac87f142a3de8d`
+Validation PR: `#1 Validate current KeepMeter MVP build` — merged
+Validated workflow run: `32178808223` — SUCCESS
 
 ## Product thesis
 
@@ -29,6 +31,9 @@ Core loop:
 9. German + English from the first build.
 10. Free tier: up to 5 active purchases.
 11. Lifetime Pro via StoreKit 2; no subscription in v1.
+12. First-launch onboarding explains the product loop.
+13. Lightweight Insights summarizes tracked value, usage and decisions.
+14. Settings exposes Pro status, restore flow, privacy messaging and onboarding reset.
 
 ## Native stack
 
@@ -37,15 +42,15 @@ Core loop:
 - UserNotifications
 - StoreKit 2
 - iOS 17+
-- GitHub Actions simulator-build workflow
+- GitHub Actions iOS Simulator build validation
 
 ## Current implementation
 
-### Implemented
+### Implemented and compiling
 
-- Native `KeepMeter.xcodeproj` created.
-- Shared Xcode scheme created.
-- Generated Info.plist configuration added through build settings.
+- Native `KeepMeter.xcodeproj`.
+- Shared Xcode scheme.
+- Generated Info.plist configuration through build settings.
 - Provisional bundle ID: `de.kamilunavo.keepmeter`.
 - App version scaffold: `0.1.0 (1)`.
 - `Purchase` SwiftData model.
@@ -55,7 +60,7 @@ Core loop:
 - Return-window remaining-days calculation.
 - Return-window elapsed-ratio calculation.
 - Deterministic `DecisionEngine` with KEEP / REVIEW / RETURN? signals.
-- Decision reasons are shown to the user; recommendation is not opaque AI.
+- Decision reasons shown to the user; recommendation is not opaque AI.
 - Home / Decision Dashboard.
 - Add Purchase flow.
 - Purchase Detail screen.
@@ -67,12 +72,35 @@ Core loop:
 - StoreKit 2 entitlement service.
 - Lifetime Pro purchase / restore plumbing.
 - Free-tier cap of 5 active purchases.
-- Lifetime Pro paywall shown when the cap is reached.
+- Lifetime Pro paywall when the cap is reached.
+- 3-page first-launch onboarding.
+- Main tab shell: Active / Insights / Archive / Settings.
+- Insights dashboard with tracked value, total uses, average cost/use, open decisions, kept/returned counts and best-value item.
+- Settings / Pro management entry.
+- Local-first privacy explanation in Settings.
+- Onboarding can be shown again from Settings.
 - English localization resource.
 - German localization resource.
+- `Combine` import fix for `EntitlementStore` state publishing.
 - GitHub Actions workflow at `.github/workflows/ios-build.yml` for an unsigned iOS Simulator build.
 
-### Monetization implementation
+## Verified build milestone
+
+The first real CI compile is confirmed green.
+
+Validation method:
+
+1. Created branch `agent/ci-validation` from the current `main` implementation.
+2. Opened PR #1 so the existing `pull_request` workflow could be observed through the connected GitHub interface.
+3. GitHub Actions run `32178808223` executed job `build`.
+4. `xcodebuild` compiled `KeepMeter.xcodeproj` / scheme `KeepMeter` for generic iOS Simulator with code signing disabled.
+5. All workflow steps completed successfully.
+6. PR #1 was squash-merged.
+7. Resulting merge commit: `bf024336455d2a65da1e7d5f25ac87f142a3de8d`.
+
+This is the first objective green-build gate for App Factory #001.
+
+## Monetization implementation
 
 Current code product ID:
 
@@ -86,7 +114,7 @@ Current behavior:
 - Pro purchase model: one-time Lifetime unlock.
 - No subscription in v1.
 
-The StoreKit code exists, but the matching In-App Purchase still needs to be created/configured in App Store Connect before real purchase testing.
+The StoreKit code compiles, but the matching In-App Purchase still needs local StoreKit test configuration and App Store Connect creation/configuration before real purchase testing.
 
 ## Decision-engine v1
 
@@ -116,27 +144,30 @@ Cost per use is displayed continuously. The current engine does not pretend that
 
 ## Current build / QA status
 
-- Xcode project and shared scheme are committed.
-- A real GitHub Actions iOS Simulator build workflow is committed.
-- The connected GitHub interface used in this chat does not expose push-triggered workflow-run listing, so the CI result is not yet verified from this environment.
-- No simulator/device QA has been completed yet.
-- No TestFlight build has been uploaded yet.
+- First CI iOS Simulator build: GREEN.
+- PR validation path confirmed usable for future compile checks.
+- Source currently compiles with Onboarding, Insights, Settings and StoreKit plumbing included.
+- No physical-device QA yet.
+- Persistence/relaunch behavior has not yet been explicitly exercised.
+- Notification permission/delivery behavior has not yet been explicitly exercised.
+- StoreKit sandbox/local product flow has not yet been exercised.
+- No TestFlight build uploaded yet.
+- No App Store submission yet.
 
 ## Still open for MVP
 
-- Onboarding (max 3 cards).
-- Lightweight Insights screen.
-- Settings / explicit Pro management entry point.
-- Visual identity / app icon / first high-polish design pass.
-- Dynamic notification strings need full DE/EN formatting cleanup.
-- StoreKit local test configuration and App Store Connect IAP setup.
+- First high-polish visual system across Dashboard / Detail / Insights / Settings.
+- Visual identity and app icon.
+- Dynamic notification strings: full DE/EN formatting cleanup.
+- StoreKit local `.storekit` test configuration.
+- Create/configure Lifetime IAP in App Store Connect.
 - Persistence/relaunch QA.
 - Notification permission/behavior QA.
+- Free-limit / purchase / restore QA.
 - Light/dark-mode polish.
 - Accessibility pass.
-- Final-enough name/trademark/domain due diligence before public branding.
-- First successful simulator build validation.
-- First TestFlight readiness pass.
+- Final-enough name/domain/trademark due diligence before public branding.
+- First TestFlight readiness pass and signed archive/upload.
 
 ## Naming
 
@@ -146,13 +177,13 @@ Status: PROVISIONAL. Preliminary market checks did not reveal an obvious exact-n
 
 ## Immediate next steps
 
-1. Get the first simulator build green and fix any Xcode/Swift compile issues.
-2. Add onboarding and Settings/Pro entry point.
-3. Add first polished visual system and app icon direction.
-4. Add StoreKit test configuration and create the Lifetime product in App Store Connect when ready.
-5. QA persistence, reminders, free limit and restore flow.
-6. Perform final name/domain/trademark due diligence before App Store branding is locked.
-7. Prepare first TestFlight build only after the core loop is stable.
+1. Apply the first coherent high-polish visual system while preserving the now-green architecture.
+2. Create an app-icon / visual-identity direction once the UI language is coherent.
+3. Add local StoreKit test configuration and exercise the free-to-Pro path.
+4. QA persistence, reminders and core decision flow.
+5. Complete light/dark and accessibility passes.
+6. Perform stronger name/domain/trademark due diligence before App Store branding is locked.
+7. Prepare first TestFlight build only after the QA gates above are green.
 
 ## Cross-project handoff
 
