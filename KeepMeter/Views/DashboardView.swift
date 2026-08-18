@@ -3,8 +3,13 @@ import SwiftData
 
 struct DashboardView: View {
     @Environment(\.modelContext) private var modelContext
+    @EnvironmentObject private var entitlementStore: EntitlementStore
     @Query(sort: \Purchase.returnDeadline) private var purchases: [Purchase]
+
     @State private var showingAddPurchase = false
+    @State private var showingPaywall = false
+
+    private let freeActivePurchaseLimit = 5
 
     private var activePurchases: [Purchase] {
         purchases.filter { $0.outcome == .active }
@@ -20,13 +25,17 @@ struct DashboardView: View {
                         Text(String(localized: "Add a recent purchase and KeepMeter will help you decide before the return window closes."))
                     } actions: {
                         Button(String(localized: "Add purchase")) {
-                            showingAddPurchase = true
+                            presentAddPurchase()
                         }
                         .buttonStyle(.borderedProminent)
                     }
                 } else {
                     ScrollView {
                         LazyVStack(spacing: 14) {
+                            if !entitlementStore.isPro && activePurchases.count >= freeActivePurchaseLimit {
+                                freeLimitBanner
+                            }
+
                             ForEach(activePurchases) { purchase in
                                 PurchaseCardView(purchase: purchase) {
                                     logUse(for: purchase)
@@ -41,7 +50,7 @@ struct DashboardView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
-                        showingAddPurchase = true
+                        presentAddPurchase()
                     } label: {
                         Image(systemName: "plus")
                     }
@@ -51,6 +60,43 @@ struct DashboardView: View {
             .sheet(isPresented: $showingAddPurchase) {
                 AddPurchaseView()
             }
+            .sheet(isPresented: $showingPaywall) {
+                PaywallView()
+            }
+        }
+    }
+
+    private var freeLimitBanner: some View {
+        Button {
+            showingPaywall = true
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "sparkles")
+                    .font(.title3)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(String(localized: "Free limit reached"))
+                        .font(.headline)
+                    Text(String(localized: "Lifetime Pro unlocks unlimited active purchases."))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .foregroundStyle(.secondary)
+            }
+            .padding(14)
+            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func presentAddPurchase() {
+        if !entitlementStore.isPro && activePurchases.count >= freeActivePurchaseLimit {
+            showingPaywall = true
+        } else {
+            showingAddPurchase = true
         }
     }
 
@@ -90,7 +136,6 @@ private struct PurchaseCardView: View {
                         }
 
                         Spacer()
-
                         DecisionBadge(status: snapshot.status)
                     }
 
