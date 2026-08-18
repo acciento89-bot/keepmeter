@@ -17,6 +17,8 @@
 		A10000000000000000000008 /* AddPurchaseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000008 /* AddPurchaseView.swift */; };
 		A10000000000000000000009 /* PurchaseDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000009 /* PurchaseDetailView.swift */; };
 		A1000000000000000000000A /* ArchiveView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000A /* ArchiveView.swift */; };
+		A1000000000000000000000B /* EntitlementStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000C /* EntitlementStore.swift */; };
+		A1000000000000000000000C /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000D /* PaywallView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -31,6 +33,8 @@
 		B10000000000000000000009 /* PurchaseDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PurchaseDetailView.swift; sourceTree = "<group>"; };
 		B1000000000000000000000A /* ArchiveView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArchiveView.swift; sourceTree = "<group>"; };
 		B1000000000000000000000B /* KeepMeter.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = KeepMeter.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B1000000000000000000000C /* EntitlementStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntitlementStore.swift; sourceTree = "<group>"; };
+		B1000000000000000000000D /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -77,6 +81,7 @@
 			children = (
 				B10000000000000000000004 /* DecisionEngine.swift */,
 				B10000000000000000000005 /* NotificationManager.swift */,
+				B1000000000000000000000C /* EntitlementStore.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -89,6 +94,7 @@
 				B10000000000000000000008 /* AddPurchaseView.swift */,
 				B10000000000000000000009 /* PurchaseDetailView.swift */,
 				B1000000000000000000000A /* ArchiveView.swift */,
+				B1000000000000000000000D /* PaywallView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -180,6 +186,8 @@
 				A10000000000000000000008 /* AddPurchaseView.swift in Sources */,
 				A10000000000000000000009 /* PurchaseDetailView.swift in Sources */,
 				A1000000000000000000000A /* ArchiveView.swift in Sources */,
+				A1000000000000000000000B /* EntitlementStore.swift in Sources */,
+				A1000000000000000000000C /* PaywallView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
