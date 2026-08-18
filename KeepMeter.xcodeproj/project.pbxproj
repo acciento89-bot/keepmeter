@@ -19,6 +19,7 @@
 		A1000000000000000000000A /* ArchiveView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000A /* ArchiveView.swift */; };
 		A1000000000000000000000B /* EntitlementStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000C /* EntitlementStore.swift */; };
 		A1000000000000000000000C /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000000D /* PaywallView.swift */; };
+		A1000000000000000000000D /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = G10000000000000000000001 /* Localizable.strings */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -35,6 +36,8 @@
 		B1000000000000000000000B /* KeepMeter.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = KeepMeter.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B1000000000000000000000C /* EntitlementStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntitlementStore.swift; sourceTree = "<group>"; };
 		B1000000000000000000000D /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
+		B1000000000000000000000E /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
+		B1000000000000000000000F /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/Localizable.strings; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -63,6 +66,7 @@
 				D10000000000000000000003 /* Models */,
 				D10000000000000000000004 /* Services */,
 				D10000000000000000000005 /* Views */,
+				G10000000000000000000001 /* Localizable.strings */,
 			);
 			path = KeepMeter;
 			sourceTree = "<group>";
@@ -166,6 +170,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A1000000000000000000000D /* Localizable.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -192,6 +197,18 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXVariantGroup section */
+		G10000000000000000000001 /* Localizable.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				B1000000000000000000000E /* en */,
+				B1000000000000000000000F /* de */,
+			);
+			name = Localizable.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
 		F20000000000000000000001 /* Debug */ = {
