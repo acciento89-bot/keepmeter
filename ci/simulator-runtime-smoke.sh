@@ -36,7 +36,6 @@ for runtime, devices in data.get("devices", {}).items():
         name = device.get("name", "")
         if not name.startswith("iPhone"):
             continue
-        # Prefer the newest installed iOS runtime, then a modern Pro device name.
         pro_score = 2 if "Pro" in name else 1 if "Plus" in name or "Max" in name else 0
         candidates.append((version, pro_score, name, device["udid"]))
 
@@ -44,7 +43,8 @@ if not candidates:
     raise SystemExit("No available iPhone simulator found")
 
 candidates.sort()
-print(candidates[-1][3])
+version, _, name, udid = candidates[-1]
+print(udid)
 PY
 )"
 
@@ -54,9 +54,47 @@ cleanup() {
 }
 trap cleanup EXIT
 
+device_state() {
+  python3 - "$udid" <<'PY'
+import json
+import subprocess
+import sys
+
+udid = sys.argv[1]
+data = json.loads(subprocess.check_output(
+    ["xcrun", "simctl", "list", "devices", "-j"],
+    text=True,
+))
+for devices in data.get("devices", {}).values():
+    for device in devices:
+        if device.get("udid") == udid:
+            print(device.get("state", "Unknown"))
+            raise SystemExit(0)
+print("Missing")
+PY
+}
+
 echo "Using simulator: $udid"
 xcrun simctl boot "$udid" >/dev/null 2>&1 || true
-xcrun simctl bootstatus "$udid" -b
+
+booted=false
+for attempt in $(seq 1 60); do
+  state="$(device_state)"
+  echo "Simulator state [$attempt/60]: $state"
+  if [[ "$state" == "Booted" ]]; then
+    booted=true
+    break
+  fi
+  sleep 2
+done
+
+if [[ "$booted" != true ]]; then
+  echo "::error title=Runtime smoke::Simulator did not reach Booted state inside the bounded boot window"
+  xcrun simctl list devices
+  exit 1
+fi
+
+echo "✓ Simulator reached Booted state"
 
 xcrun simctl uninstall "$udid" "$bundle_id" >/dev/null 2>&1 || true
 xcrun simctl install "$udid" "$app_path"
@@ -69,8 +107,6 @@ fi
 
 echo "✓ App installed and data container exists"
 
-# Stable status-bar values improve screenshot diffability. Do not fail the runtime smoke if
-# a future Simulator runtime changes the status_bar command surface.
 xcrun simctl status_bar "$udid" override \
   --time 09:41 \
   --batteryState charged \
@@ -100,8 +136,6 @@ grep -F "$bundle_id:" <<<"$dark_launch" >/dev/null
 sleep 2
 xcrun simctl io "$udid" screenshot "$screenshot_dir/dashboard-de-dark.png" >/dev/null
 
-# Explicit terminate/relaunch lifecycle smoke. This is not a data-persistence claim; the
-# file-backed SwiftData reopen gate covers storage semantics separately.
 xcrun simctl terminate "$udid" "$bundle_id"
 relaunch="$(xcrun simctl launch "$udid" "$bundle_id" \
   -AppleLanguages '(de)' \
