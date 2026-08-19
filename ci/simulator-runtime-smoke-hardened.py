@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import importlib.util
+import sys
 import time
 from pathlib import Path
 
@@ -17,6 +18,10 @@ MIN_SCREENSHOT_BYTES = 4096
 FILE_POLLS = 15
 FILE_POLL_INTERVAL = 1.0
 MAX_CAPTURE_ATTEMPTS = 2
+APP_CONTAINER_POLLS_AFTER_REBOOT = 12
+
+_original_launch = runtime.launch
+_launch_recovery_used = False
 
 
 def wait_for_stable_screenshot(path: Path) -> bool:
@@ -119,11 +124,89 @@ def hardened_screenshot(udid: str, filename: str) -> Path:
     )
 
 
+def wait_for_installed_app_after_reboot(udid: str) -> Path:
+    for poll in range(1, APP_CONTAINER_POLLS_AFTER_REBOOT + 1):
+        container = runtime.app_container(udid)
+        if container is not None:
+            print(
+                f"✓ Existing KeepMeter installation survived same-device reboot on poll "
+                f"{poll}/{APP_CONTAINER_POLLS_AFTER_REBOOT}",
+                flush=True,
+            )
+            return container
+        print(
+            f"Post-reboot app container [{poll}/{APP_CONTAINER_POLLS_AFTER_REBOOT}]: not visible yet",
+            flush=True,
+        )
+        time.sleep(2)
+
+    raise runtime.RuntimeSmokeError(
+        "KeepMeter installation was not resolvable after the bounded same-device CoreSimulator reboot"
+    )
+
+
+def hardened_launch(
+    udid: str,
+    language: str,
+    locale: str,
+    onboarding: bool,
+    terminate: bool,
+    extra_arguments: list[str] | None = None,
+) -> str:
+    global _launch_recovery_used
+
+    try:
+        return _original_launch(
+            udid,
+            language,
+            locale,
+            onboarding,
+            terminate,
+            extra_arguments,
+        )
+    except runtime.RuntimeSmokeError as first_error:
+        if _launch_recovery_used:
+            raise
+
+        _launch_recovery_used = True
+        print(
+            "Active-scene launch proof failed after a successful app install; performing one bounded reboot of the SAME simulator.",
+            flush=True,
+        )
+        print(f"Initial launch failure: {first_error}", flush=True)
+
+        runtime.best_effort_simctl(["terminate", udid, runtime.BUNDLE_ID], timeout=8)
+        runtime.best_effort_simctl(["shutdown", udid], timeout=20)
+        time.sleep(5)
+
+        try:
+            runtime.wait_for_boot(udid)
+            wait_for_installed_app_after_reboot(udid)
+        except runtime.RuntimeSmokeError as recovery_error:
+            raise runtime.RuntimeSmokeError(
+                f"{first_error}; same-device CoreSimulator reboot recovery also failed: {recovery_error}"
+            ) from recovery_error
+
+        print(
+            "Retrying the launch proof once after same-device reboot; all normal active-scene assertions remain required.",
+            flush=True,
+        )
+        return _original_launch(
+            udid,
+            language,
+            locale,
+            onboarding,
+            terminate,
+            extra_arguments,
+        )
+
+
 runtime.screenshot = hardened_screenshot
+runtime.launch = hardened_launch
 
 if __name__ == "__main__":
     try:
         raise SystemExit(runtime.main())
     except runtime.RuntimeSmokeError as exc:
-        print(f"::error title=Runtime smoke::{exc}", flush=True)
+        print(f"::error title=Runtime smoke::{exc}", file=sys.stderr, flush=True)
         raise SystemExit(1)
