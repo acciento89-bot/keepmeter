@@ -67,6 +67,16 @@ Alternative free-limit path:
 2. Tap the Add Purchase `+` button.
 3. KeepMeter routes to the Pro paywall instead of allowing a sixth active purchase.
 
+## App Store web URLs
+
+The source for KeepMeter's public privacy page and the shared Kamilunavo support page is now merged in `acciento89-bot/kamilunavo` (website merge `afd809da2f814625b1cf45f6920c958897fb5398`).
+
+Intended App Store Connect values after live-deployment verification:
+- Privacy Policy URL: `https://kamilunavo.com/keepmeter/privacy`
+- Support URL: `https://kamilunavo.com/support`
+
+Do **not** mark either URL as production-verified merely because the website source is merged. Confirm both return the intended live pages before entering them into the final release checklist.
+
 ## App Store Connect entry checklist
 
 - [ ] App record exists for bundle ID `de.kamilunavo.keepmeter`.
@@ -79,6 +89,8 @@ Alternative free-limit path:
 - [ ] Add English localization exactly as above.
 - [ ] Add Review Notes from this file.
 - [ ] Upload release-candidate Pro paywall screenshot for App Review.
+- [ ] Verify KeepMeter privacy URL is live.
+- [ ] Verify Kamilunavo support URL is live.
 - [ ] Save and verify the product becomes available to sandbox/TestFlight StoreKit.
 - [ ] Run sandbox/TestFlight purchase + entitlement + restore before App Store submission.
 
