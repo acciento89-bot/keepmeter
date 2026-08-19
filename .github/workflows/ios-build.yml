@@ -70,11 +70,37 @@ jobs:
       - name: Build KeepMeter Release for iOS Simulator
         run: |
           set -o pipefail
+          rm -rf /tmp/keepmeter-release-derived
           xcodebuild \
             -project KeepMeter.xcodeproj \
             -scheme KeepMeter \
             -configuration Release \
             -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath /tmp/keepmeter-release-derived \
             CODE_SIGNING_ALLOWED=NO \
             build
+
+      - name: Validate privacy manifest in built app bundle
+        run: |
+          set -euo pipefail
+          bundle_manifest="/tmp/keepmeter-release-derived/Build/Products/Release-iphonesimulator/KeepMeter.app/PrivacyInfo.xcprivacy"
+          test -s "$bundle_manifest"
+          python3 - <<'PY'
+          import plistlib
+          from pathlib import Path
+
+          source_path = Path("KeepMeter/PrivacyInfo.xcprivacy")
+          bundle_path = Path("/tmp/keepmeter-release-derived/Build/Products/Release-iphonesimulator/KeepMeter.app/PrivacyInfo.xcprivacy")
+
+          with source_path.open("rb") as handle:
+              source = plistlib.load(handle)
+          with bundle_path.open("rb") as handle:
+              bundled = plistlib.load(handle)
+
+          if source != bundled:
+              raise SystemExit("Bundled PrivacyInfo.xcprivacy does not match the source manifest")
+
+          print("✓ PrivacyInfo.xcprivacy is bundled in the Release app product")
+          print("✓ Bundled privacy manifest matches the source manifest")
+          PY
