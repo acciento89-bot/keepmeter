@@ -267,7 +267,10 @@ def launch(
     command_error: RuntimeSmokeError | None = None
     output = ""
     try:
-        result = simctl(args, timeout=45)
+        # Hosted CoreSimulator often delivers the launch request but keeps the simctl
+        # client attached. The unique Swift-side sentinel below is the source of truth,
+        # so this client timeout is intentionally short and non-authoritative.
+        result = simctl(args, timeout=15)
         output = result.stdout.strip()
         if f"{BUNDLE_ID}:" not in output:
             print(f"Launch returned unexpected output; using Swift launch probe as authority: {output!r}", flush=True)
