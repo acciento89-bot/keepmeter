@@ -103,21 +103,6 @@ def device_state(udid: str) -> str:
     return "Missing"
 
 
-def installation_services_responsive(udid: str) -> bool:
-    try:
-        result = simctl(["listapps", udid], timeout=12, check=False, quiet=True)
-    except RuntimeSmokeError as exc:
-        print(f"Simulator app-service health probe timed out: {exc}", flush=True)
-        return False
-
-    if result.returncode != 0:
-        print("Simulator app-service health probe returned a failure", flush=True)
-        return False
-
-    print("✓ Simulator app installation services respond", flush=True)
-    return True
-
-
 def wait_for_boot(udid: str) -> None:
     try:
         simctl(["boot", udid], timeout=12, check=False)
@@ -147,12 +132,12 @@ def wait_for_boot(udid: str) -> None:
         simctl(["bootstatus", udid, "-b"], timeout=90)
         print("✓ Simulator boot services report ready", flush=True)
     except RuntimeSmokeError as exc:
-        print(f"bootstatus did not complete; checking app installation services directly: {exc}", flush=True)
-        if not installation_services_responsive(udid):
-            raise RuntimeSmokeError(
-                "Simulator reached Booted state but CoreSimulator app installation services never became responsive"
-            ) from exc
-        time.sleep(3)
+        # Hosted CoreSimulator can deliver a usable simulator even when the bootstatus
+        # client does not return. Gate 17 proved that install can still complete later,
+        # so bootstatus timeout is deliberately non-authoritative. The full bounded
+        # install + container-resolution window below is the source of truth.
+        print(f"bootstatus did not complete; continuing after a bounded settle: {exc}", flush=True)
+        time.sleep(15)
 
 
 def app_container(udid: str, kind: str = "app") -> Path | None:
@@ -228,7 +213,7 @@ def prepare_runtime_simulator(app_path: Path) -> tuple[str, str, tuple[int, int]
 
     detail = " | ".join(failures)
     raise RuntimeSmokeError(
-        f"No healthy simulator environment could install KeepMeter after {attempt_count} bounded attempts: {detail}"
+        f"No simulator environment could install KeepMeter after {attempt_count} bounded setup attempts: {detail}"
     )
 
 
@@ -398,7 +383,7 @@ def main() -> int:
     )
 
     udid, name, version, _ = prepare_runtime_simulator(app_path)
-    print(f"Using healthy simulator: {name}, iOS {version[0]}.{version[1]}, {udid}", flush=True)
+    print(f"Using simulator: {name}, iOS {version[0]}.{version[1]}, {udid}", flush=True)
 
     try:
         best_effort_simctl(
