@@ -7,11 +7,17 @@ import shutil
 import subprocess
 import sys
 import time
+import uuid
 from pathlib import Path
 
 BUNDLE_ID = "de.kamilunavo.keepmeter"
 SCREENSHOT_DIR = Path("/tmp/keepmeter-runtime")
+SCREENSHOT_VALIDATOR = Path("/tmp/keepmeter-runtime-screenshot-signal")
 DEFAULT_APP_PATH = Path("/tmp/keepmeter-debug-derived/Build/Products/Debug-iphonesimulator/KeepMeter.app")
+PERSISTENCE_SENTINEL = "keepmeter-runtime-persistence-ok.txt"
+LAUNCH_SENTINEL = "keepmeter-runtime-launch-ok.txt"
+LAUNCH_PROBE_ARGUMENT = "--keepMeterRuntimeLaunchProbe"
+LAUNCH_TOKEN_PREFIX = "--keepMeterRuntimeLaunchToken="
 
 
 class RuntimeSmokeError(RuntimeError):
@@ -125,8 +131,6 @@ def wait_for_boot(udid: str) -> None:
             f"Simulator did not reach Booted state inside the bounded boot window; last state: {last_state}"
         )
 
-    # 'Booted' is only a CoreSimulator lifecycle state. Wait for the simulator's boot
-    # services (SpringBoard/MobileInstallation included) before attempting app install.
     try:
         simctl(["bootstatus", udid, "-b"], timeout=90)
         print("✓ Simulator boot services report ready", flush=True)
@@ -158,15 +162,11 @@ def app_container(udid: str, kind: str = "app") -> Path | None:
 
 
 def ensure_installed(udid: str, app_path: Path) -> Path:
-    # Hosted CI starts from a fresh runner; avoid an unconditional uninstall because
-    # MobileInstallation can still be settling and uninstall itself can block.
     print("Installing KeepMeter into the booted simulator…", flush=True)
     try:
         simctl(["install", udid, str(app_path)], timeout=90)
         print("✓ simctl install returned successfully", flush=True)
     except RuntimeSmokeError as exc:
-        # The client can time out even if CoreSimulator completes the request later.
-        # The installed app container is the source of truth.
         print(f"Install command did not return cleanly; polling installation state: {exc}", flush=True)
 
     for attempt in range(1, 21):
@@ -182,7 +182,78 @@ def ensure_installed(udid: str, app_path: Path) -> Path:
     )
 
 
-def launch(udid: str, language: str, locale: str, onboarding: bool, terminate: bool) -> str:
+def simulator_data_applications_root(udid: str) -> Path:
+    return (
+        Path.home()
+        / "Library"
+        / "Developer"
+        / "CoreSimulator"
+        / "Devices"
+        / udid
+        / "data"
+        / "Containers"
+        / "Data"
+        / "Application"
+    )
+
+
+def sentinel_candidates(udid: str, filename: str) -> list[Path]:
+    root = simulator_data_applications_root(udid)
+    if not root.is_dir():
+        return []
+    return list(root.glob(f"*/Documents/{filename}"))
+
+
+def matching_host_sentinel(udid: str, filename: str, expected_content: str) -> Path | None:
+    for path in sentinel_candidates(udid, filename):
+        try:
+            content = path.read_text(encoding="utf-8").strip()
+        except (FileNotFoundError, OSError, UnicodeError):
+            continue
+        if content == expected_content:
+            return path
+    return None
+
+
+def remove_host_sentinels(udid: str, filename: str) -> None:
+    for path in sentinel_candidates(udid, filename):
+        try:
+            path.unlink()
+        except FileNotFoundError:
+            pass
+
+
+def wait_for_host_sentinel(
+    udid: str,
+    filename: str,
+    expected_content: str,
+    *,
+    attempts: int,
+    interval: float,
+    label: str,
+) -> Path:
+    for attempt in range(1, attempts + 1):
+        path = matching_host_sentinel(udid, filename, expected_content)
+        if path is not None:
+            print(f"✓ {label} verified on poll {attempt}/{attempts}", flush=True)
+            return path
+        print(f"{label} [{attempt}/{attempts}]: not ready yet", flush=True)
+        time.sleep(interval)
+
+    raise RuntimeSmokeError(f"{label} did not appear inside the bounded verification window")
+
+
+def launch(
+    udid: str,
+    language: str,
+    locale: str,
+    onboarding: bool,
+    terminate: bool,
+    extra_arguments: list[str] | None = None,
+) -> str:
+    launch_token = uuid.uuid4().hex
+    remove_host_sentinels(udid, LAUNCH_SENTINEL)
+
     args = ["launch"]
     if terminate:
         args.append("--terminate-running-process")
@@ -195,12 +266,50 @@ def launch(udid: str, language: str, locale: str, onboarding: bool, terminate: b
         locale,
         "-hasCompletedOnboarding",
         "YES" if onboarding else "NO",
+        LAUNCH_PROBE_ARGUMENT,
+        f"{LAUNCH_TOKEN_PREFIX}{launch_token}",
     ])
-    result = simctl(args, timeout=45)
-    output = result.stdout.strip()
-    if f"{BUNDLE_ID}:" not in output:
-        raise RuntimeSmokeError(f"Unexpected simctl launch output: {output!r}")
-    return output
+    if extra_arguments:
+        args.extend(extra_arguments)
+
+    command_error: RuntimeSmokeError | None = None
+    output = ""
+    try:
+        result = simctl(args, timeout=15)
+        output = result.stdout.strip()
+        if f"{BUNDLE_ID}:" not in output:
+            print(f"Launch returned unexpected output; using active-scene probe as authority: {output!r}", flush=True)
+    except RuntimeSmokeError as exc:
+        command_error = exc
+        print(f"Launch command did not return cleanly; verifying foreground execution: {exc}", flush=True)
+
+    for attempt in range(1, 11):
+        if matching_host_sentinel(udid, LAUNCH_SENTINEL, launch_token) is not None:
+            print(f"✓ Active SwiftUI scene verified on poll {attempt}/10", flush=True)
+            return output or f"{BUNDLE_ID}: verified-by-active-scene-sentinel"
+        time.sleep(1)
+
+    print("Active scene not visible yet; nudging KeepMeter to the foreground", flush=True)
+    try:
+        simctl(["launch", udid, BUNDLE_ID], timeout=10, check=False)
+    except RuntimeSmokeError as exc:
+        print(f"Foreground nudge did not return promptly: {exc}", flush=True)
+
+    try:
+        wait_for_host_sentinel(
+            udid,
+            LAUNCH_SENTINEL,
+            launch_token,
+            attempts=35,
+            interval=1,
+            label="Active SwiftUI scene sentinel",
+        )
+    except RuntimeSmokeError as exc:
+        if command_error is not None:
+            raise RuntimeSmokeError(f"{command_error}; additionally, {exc}") from exc
+        raise
+
+    return output or f"{BUNDLE_ID}: verified-by-active-scene-sentinel"
 
 
 def screenshot(udid: str, filename: str) -> Path:
@@ -209,7 +318,19 @@ def screenshot(udid: str, filename: str) -> Path:
     if not path.is_file() or path.stat().st_size == 0:
         raise RuntimeSmokeError(f"Runtime screenshot is missing or empty: {path}")
     command(["sips", "-g", "pixelWidth", "-g", "pixelHeight", str(path)], timeout=15)
+    command([str(SCREENSHOT_VALIDATOR), str(path)], timeout=20)
     return path
+
+
+def require_persistence_sentinel(udid: str) -> Path:
+    return wait_for_host_sentinel(
+        udid,
+        PERSISTENCE_SENTINEL,
+        "ok",
+        attempts=20,
+        interval=1,
+        label="Runtime SwiftData persistence sentinel",
+    )
 
 
 def main() -> int:
@@ -221,6 +342,11 @@ def main() -> int:
         shutil.rmtree(SCREENSHOT_DIR)
     SCREENSHOT_DIR.mkdir(parents=True)
 
+    command(
+        ["xcrun", "swiftc", "ci/RuntimeScreenshotSignal.swift", "-o", str(SCREENSHOT_VALIDATOR)],
+        timeout=90,
+    )
+
     udid, name, version = select_simulator()
     print(f"Using simulator: {name}, iOS {version[0]}.{version[1]}, {udid}", flush=True)
 
@@ -228,12 +354,6 @@ def main() -> int:
         wait_for_boot(udid)
         installed_app = ensure_installed(udid, app_path)
         print(f"✓ App installed at {installed_app}", flush=True)
-
-        data_container = app_container(udid, "data")
-        if data_container is None:
-            print("Data container is not materialized before first launch; continuing", flush=True)
-        else:
-            print(f"✓ App data container exists at {data_container}", flush=True)
 
         best_effort_simctl(
             [
@@ -249,28 +369,45 @@ def main() -> int:
 
         simctl(["ui", udid, "appearance", "light"], timeout=20)
         launch(udid, "en", "en_US", onboarding=False, terminate=True)
-        time.sleep(3)
+        time.sleep(5)
         screenshot(udid, "onboarding-en-light.png")
 
-        best_effort_simctl(["terminate", udid, BUNDLE_ID], timeout=15)
+        launch(
+            udid,
+            "en",
+            "en_US",
+            onboarding=True,
+            terminate=True,
+            extra_arguments=["--keepMeterRuntimeSeed"],
+        )
+        time.sleep(10)
+        screenshot(udid, "dashboard-populated-en-light.png")
 
         simctl(["ui", udid, "appearance", "dark"], timeout=20)
-        launch(udid, "de", "de_DE", onboarding=True, terminate=False)
+        remove_host_sentinels(udid, PERSISTENCE_SENTINEL)
+        launch(
+            udid,
+            "de",
+            "de_DE",
+            onboarding=True,
+            terminate=True,
+            extra_arguments=["--keepMeterRuntimeProbe"],
+        )
+        require_persistence_sentinel(udid)
+        time.sleep(8)
+        screenshot(udid, "dashboard-persisted-de-dark.png")
+
+        launch(udid, "de", "de_DE", onboarding=True, terminate=True)
         time.sleep(3)
-        screenshot(udid, "dashboard-de-dark.png")
 
-        best_effort_simctl(["terminate", udid, BUNDLE_ID], timeout=15)
-        launch(udid, "de", "de_DE", onboarding=True, terminate=False)
-        time.sleep(2)
-
-        if app_container(udid, "data") is None:
-            raise RuntimeSmokeError("App data container is still unavailable after successful launch")
-
-        print("✓ KeepMeter launched in Light/English runtime", flush=True)
-        print("✓ KeepMeter launched in Dark/German runtime", flush=True)
-        print("✓ KeepMeter terminated and relaunched successfully", flush=True)
-        print("✓ Runtime screenshots captured", flush=True)
-        print("KeepMeter simulator runtime smoke passed", flush=True)
+        print("✓ Fresh-install Light/English onboarding rendered", flush=True)
+        print("✓ DEBUG-only realistic purchase data seeded into SwiftData", flush=True)
+        print("✓ Populated Light/English dashboard rendered", flush=True)
+        print("✓ Seeded purchases survived terminate/relaunch without reseeding", flush=True)
+        print("✓ Persisted Dark/German dashboard rendered from an active scene", flush=True)
+        print("✓ Final clean relaunch reached an active SwiftUI scene without seed/probe arguments", flush=True)
+        print("✓ Runtime screenshots passed visual-signal validation", flush=True)
+        print("KeepMeter populated simulator runtime smoke passed", flush=True)
         return 0
     finally:
         best_effort_simctl(["terminate", udid, BUNDLE_ID], timeout=8)
