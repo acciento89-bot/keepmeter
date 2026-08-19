@@ -6,9 +6,13 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: keepmeter-ios-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
-    runs-on: macos-latest
+    runs-on: macos-26-intel
 
     steps:
       - name: Checkout
@@ -58,14 +62,27 @@ jobs:
       - name: Build KeepMeter Debug for iOS Simulator
         run: |
           set -o pipefail
+          rm -rf /tmp/keepmeter-debug-derived
           xcodebuild \
             -project KeepMeter.xcodeproj \
             -scheme KeepMeter \
             -configuration Debug \
             -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath /tmp/keepmeter-debug-derived \
             CODE_SIGNING_ALLOWED=NO \
             build
+
+      - name: Exercise booted iOS simulator runtime
+        run: python3 ci/simulator-runtime-smoke.py /tmp/keepmeter-debug-derived/Build/Products/Debug-iphonesimulator/KeepMeter.app
+
+      - name: Upload runtime screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: keepmeter-runtime-screenshots
+          path: /tmp/keepmeter-runtime/*.png
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Build KeepMeter Release for iOS Simulator
         run: |
