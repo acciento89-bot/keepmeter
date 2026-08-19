@@ -98,6 +98,30 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             build
 
+      - name: Verify Debug runtime hooks are absent from Release binary
+        run: |
+          set -euo pipefail
+          release_binary="/tmp/keepmeter-release-derived/Build/Products/Release-iphonesimulator/KeepMeter.app/KeepMeter"
+          test -s "$release_binary"
+          strings "$release_binary" > /tmp/keepmeter-release-strings.txt
+
+          forbidden=(
+            "keepMeterRuntimeSeed"
+            "keepMeterRuntimeProbe"
+            "keepmeter-runtime-persistence-ok.txt"
+            "Studio Headphones"
+            "Travel Backpack"
+          )
+
+          for marker in "${forbidden[@]}"; do
+            if grep -F "$marker" /tmp/keepmeter-release-strings.txt >/dev/null; then
+              echo "::error title=Release QA isolation::DEBUG-only runtime marker leaked into Release binary: $marker"
+              exit 1
+            fi
+          done
+
+          echo "✓ DEBUG-only runtime seed/probe hooks are absent from Release binary"
+
       - name: Validate privacy manifest in built app bundle
         run: |
           set -euo pipefail
