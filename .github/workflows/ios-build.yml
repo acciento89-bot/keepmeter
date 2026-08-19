@@ -28,6 +28,9 @@ jobs:
           grep -F '"productID" : "de.kamilunavo.keepmeter.pro.lifetime"' KeepMeter/StoreKit/KeepMeter.storekit >/dev/null
           grep -F '../../../KeepMeter/StoreKit/KeepMeter.storekit' KeepMeter.xcodeproj/xcshareddata/xcschemes/KeepMeter.xcscheme >/dev/null
 
+      - name: Validate App Store IAP metadata limits
+        run: python3 ci/storekit-metadata-preflight.py
+
       - name: Validate App Store release settings
         run: bash ci/release-preflight.sh
 
