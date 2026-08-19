@@ -16,7 +16,7 @@ This file tracks App Store-facing release requirements. `docs/PROJECT_STATE.md` 
 - App category: Utilities
 - StoreKit Lifetime product ID: `de.kamilunavo.keepmeter.pro.lifetime`
 - Monetization: one-time non-consumable Lifetime Pro; no subscription in v1
-- Free limit: 5 active purchases
+- Free limit: 5 active purchases, enforced through centralized `AccessPolicy`
 
 ## Public branding / release assets
 
@@ -43,17 +43,48 @@ This file tracks App Store-facing release requirements. `docs/PROJECT_STATE.md` 
 
 Important: re-audit App Privacy and the manifest if analytics, crash reporting, networking/data collection or additional Required Reason APIs are added.
 
+## Lifetime Pro App Store Connect handoff
+
+Exact product-entry details are maintained in `docs/IAP_LIFETIME_PRO.md`.
+
+Locked v1 values:
+- Type: Non-Consumable
+- Reference Name: `KeepMeter Lifetime Pro`
+- Product ID: `de.kamilunavo.keepmeter.pro.lifetime`
+- Germany launch-price decision: €9.99 one-time / matching App Store Connect price point
+- German Display Name: `KeepMeter Pro – Lifetime`
+- German Description: `Unbegrenzt aktive Käufe. Einmal zahlen.`
+- English Display Name: `KeepMeter Pro Lifetime`
+- English Description: `Unlimited active purchases. Pay once.`
+
+`ci/storekit-metadata-preflight.py` hard-checks the exact product identity, required DE/EN copy and App Store Connect metadata-length limits before merge.
+
+## App Store web URLs
+
+Website source is prepared in `acciento89-bot/kamilunavo`, merge `afd809da2f814625b1cf45f6920c958897fb5398`:
+- product-specific bilingual KeepMeter privacy page source: DONE
+- KeepMeter added to shared Kamilunavo support page: DONE
+
+Intended App Store Connect URLs **after live-deployment verification**:
+- Privacy Policy: `https://kamilunavo.com/keepmeter/privacy`
+- Support: `https://kamilunavo.com/support`
+
+Source merge is not treated as proof that the public deployment is live. Both URLs remain release-open until verified against the deployed website.
+
 ## App Store Connect blockers
 
 - [x] Lock operational v1 public app name / visual direction.
 - [x] Add final AppIcon asset catalog and connect it to the target.
 - [x] Add current v1 Privacy Manifest baseline and verify it in the built app bundle.
+- [x] Lock exact Lifetime Pro product identity, DE/EN copy, reviewer notes and €9.99 launch-price decision in repo handoff.
+- [x] Prepare KeepMeter-specific privacy-page source and shared support-page source on the Kamilunavo website.
+- [ ] Verify KeepMeter privacy URL is live publicly.
+- [ ] Verify Kamilunavo support URL is live publicly.
 - [ ] Create/verify the App Store Connect app record with public name / bundle ID.
 - [ ] Create the non-consumable Lifetime IAP with product ID `de.kamilunavo.keepmeter.pro.lifetime`.
-- [ ] Choose final App Store price for Lifetime Pro; local StoreKit price 9.99 is test metadata only.
-- [ ] Add IAP display name/description/localizations and review screenshot as required in App Store Connect.
-- [ ] Supply final privacy policy URL.
-- [ ] Supply final support URL.
+- [ ] Configure €9.99 launch price / matching App Store price point and availability.
+- [ ] Enter locked IAP display name/description/localizations and reviewer notes.
+- [ ] Upload release-candidate Pro paywall review screenshot in App Store Connect.
 - [ ] Complete App Privacy answers against the final binary.
 - [ ] Capture final iPhone App Store screenshots from a release candidate.
 - [ ] Perform signed Archive validation.
@@ -142,7 +173,7 @@ purchase,return,deadline,shopping,cost,usage,decision,tracker,keep,returns
 
 ## Screenshot capture plan
 
-Automated CI now produces representative runtime screenshots, but these are QA evidence rather than final App Store marketing screenshots.
+Automated CI produces representative runtime screenshots, but these are QA evidence rather than final App Store marketing screenshots.
 
 Final App Store screenshot sequence:
 1. populated Active dashboard with realistic purchases and different urgency states.
@@ -166,9 +197,11 @@ Gate 15 — PR #15 — workflow `32215165699` — merge `9c5b33bf0a0123afe243a0b
 - [x] Release Simulator build passed after runtime gate.
 - [x] built Release app contains matching `PrivacyInfo.xcprivacy`.
 
-Artifact: `keepmeter-runtime-screenshots`, workflow artifact ID `9352256830` (CI retention 7 days).
+Gate 16 — centralized access policy — merge `14f265b4fee61d2be635cb2ba0ed15b994904924`:
+- [x] one source of truth for the five-active-purchase Free threshold.
+- [x] ProductRulesSmoke directly covers free-tier boundary and Pro bypass behavior.
 
-This does **not** replace physical-device QA or a full all-screen visual review.
+A populated SwiftData relaunch/visual-signal gate is being validated separately and must not be marked complete until its final PR is green and visually reviewed.
 
 ## Runtime/device gates before first submission
 
@@ -182,6 +215,7 @@ Automated/simulator:
 - [x] executable file-backed SwiftData reopen test.
 - [x] DecisionEngine/product-rule automated coverage.
 - [x] EN/DE key and format-placeholder parity.
+- [x] Free/Pro access-policy boundary covered directly in automated product-rule tests.
 
 Still required before submission:
 - [ ] physical-device fresh install/onboarding pass.
@@ -205,7 +239,8 @@ Gate 12 — production StoreKit entitlement hardening: GREEN.
 Gate 13 — product-rule + EN/DE localization regression gates: GREEN.
 Gate 14 — Required Reason Privacy Manifest + built-bundle verification: GREEN.
 Gate 15 — booted iPhone Simulator runtime + screenshots + relaunch: GREEN.
+Gate 16 — centralized Free/Pro AccessPolicy + boundary tests: GREEN.
 
 ## Release rule
 
-The automated Simulator pipeline is now substantially stronger than a compile-only check, but it is still not a signed Archive, App Store sandbox session or physical-device validation. Do not mark KeepMeter release-ready until the App Store Connect Lifetime IAP, remaining device gates and first signed TestFlight archive/upload are complete.
+The automated Simulator pipeline is substantially stronger than a compile-only check, but it is still not a signed Archive, App Store sandbox session or physical-device validation. Do not mark KeepMeter release-ready until the App Store Connect Lifetime IAP, remaining device gates and first signed TestFlight archive/upload are complete.
