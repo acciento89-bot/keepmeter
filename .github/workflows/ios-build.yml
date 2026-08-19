@@ -154,3 +154,35 @@ jobs:
           print("✓ PrivacyInfo.xcprivacy is bundled in the Release app product")
           print("✓ Bundled privacy manifest matches the source manifest")
           PY
+
+  storekit-experimental:
+    name: StoreKit entitlement XCTest (experimental)
+    runs-on: macos-26
+    continue-on-error: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode 26.2 and iOS 26.2
+        run: |
+          set -euo pipefail
+          sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
+          xcodebuild -version
+          xcrun simctl list devices available
+          xcrun simctl list devices available | grep -F -- '-- iOS 26.2 --' >/dev/null
+          xcrun simctl list devices available | grep -F 'iPhone 17 Pro Max' >/dev/null
+
+      - name: Exercise Free to Lifetime Pro entitlement recovery
+        run: |
+          set -o pipefail
+          rm -rf /tmp/keepmeter-storekit-tests-derived
+          xcodebuild \
+            -project KeepMeter.xcodeproj \
+            -scheme KeepMeter \
+            -configuration Debug \
+            -destination 'platform=iOS Simulator,name=iPhone 17 Pro Max,OS=26.2' \
+            -derivedDataPath /tmp/keepmeter-storekit-tests-derived \
+            CODE_SIGNING_ALLOWED=NO \
+            -only-testing:KeepMeterStoreKitTests/KeepMeterStoreKitTests/testLifetimePurchaseUnlocksAndRecoversAcrossStoreRecreation \
+            test
