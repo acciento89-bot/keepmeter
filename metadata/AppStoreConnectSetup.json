@@ -1,0 +1,60 @@
+{
+  "appRecord": {
+    "platform": "iOS",
+    "name": "KeepMeter",
+    "primaryLanguage": "German",
+    "bundleId": "de.kamilunavo.keepmeter",
+    "sku": "keepmeter-ios-001",
+    "primaryCategory": "Utilities",
+    "basePrice": "Free",
+    "marketingVersion": "0.1.0",
+    "buildNumber": "1"
+  },
+  "localizations": [
+    "de-DE",
+    "en-US"
+  ],
+  "urls": {
+    "privacyPolicy": "https://kamilunavo.com/keepmeter/privacy",
+    "support": "https://kamilunavo.com/support",
+    "liveVerified": false
+  },
+  "privacy": {
+    "dataCollected": false,
+    "tracking": false,
+    "recheckFinalBinaryBeforeSubmission": true
+  },
+  "lifetimePro": {
+    "type": "Non-Consumable",
+    "referenceName": "KeepMeter Lifetime Pro",
+    "productId": "de.kamilunavo.keepmeter.pro.lifetime",
+    "germanyLaunchPriceEUR": "9.99",
+    "subscription": false,
+    "familySharing": false,
+    "reviewScreenshotRequired": true,
+    "reviewNotesRequired": true,
+    "de-DE": {
+      "displayName": "KeepMeter Pro – Lifetime",
+      "description": "Unbegrenzt aktive Käufe. Einmal zahlen."
+    },
+    "en-US": {
+      "displayName": "KeepMeter Pro Lifetime",
+      "description": "Unlimited active purchases. Pay once."
+    }
+  },
+  "euCompliance": {
+    "dsaTraderStatus": "VERIFY_EXISTING_ACCOUNT_AND_APP_SETTING_BEFORE_EU_DISTRIBUTION"
+  },
+  "testFlight": {
+    "workflow": ".github/workflows/testflight.yml",
+    "manualOnly": true,
+    "requiredBranch": "main",
+    "confirmation": "UPLOAD_KEEP_METER_0_1_0_BUILD_1",
+    "manageAppVersionAndBuildNumber": false,
+    "requiredSecrets": [
+      "ASC_ISSUER_ID",
+      "ASC_KEY_ID",
+      "ASC_PRIVATE_KEY_B64"
+    ]
+  }
+}
