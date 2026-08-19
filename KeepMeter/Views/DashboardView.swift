@@ -11,10 +11,15 @@ struct DashboardView: View {
     @State private var showingPaywall = false
     @State private var dataErrorMessage: String?
 
-    private let freeActivePurchaseLimit = 5
-
     private var activePurchases: [Purchase] {
         purchases.filter { $0.outcome == .active }
+    }
+
+    private var hasReachedFreeLimit: Bool {
+        AccessPolicy.hasReachedFreeLimit(
+            activePurchaseCount: activePurchases.count,
+            isPro: entitlementStore.isPro
+        )
     }
 
     private var urgentCount: Int {
@@ -33,7 +38,7 @@ struct DashboardView: View {
                         LazyVStack(spacing: 16) {
                             dashboardHeader
 
-                            if !entitlementStore.isPro && activePurchases.count >= freeActivePurchaseLimit {
+                            if hasReachedFreeLimit {
                                 freeLimitBanner
                             }
 
@@ -219,7 +224,7 @@ struct DashboardView: View {
     }
 
     private func presentAddPurchase() {
-        if !entitlementStore.isPro && activePurchases.count >= freeActivePurchaseLimit {
+        if hasReachedFreeLimit {
             showingPaywall = true
         } else {
             showingAddPurchase = true

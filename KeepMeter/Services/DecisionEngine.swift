@@ -65,3 +65,19 @@ enum DecisionEngine {
         )
     }
 }
+
+/// Single source of truth for v1 Free/Pro access rules.
+///
+/// `activePurchaseCount` must only include purchases whose outcome is `.active`.
+/// Completed/archived purchases therefore never consume a Free slot.
+enum AccessPolicy {
+    static let freeActivePurchaseLimit = 5
+
+    static func canAddActivePurchase(activePurchaseCount: Int, isPro: Bool) -> Bool {
+        isPro || activePurchaseCount < freeActivePurchaseLimit
+    }
+
+    static func hasReachedFreeLimit(activePurchaseCount: Int, isPro: Bool) -> Bool {
+        !canAddActivePurchase(activePurchaseCount: activePurchaseCount, isPro: isPro)
+    }
+}
