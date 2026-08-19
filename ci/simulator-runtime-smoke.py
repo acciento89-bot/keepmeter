@@ -12,6 +12,7 @@ from pathlib import Path
 
 BUNDLE_ID = "de.kamilunavo.keepmeter"
 SCREENSHOT_DIR = Path("/tmp/keepmeter-runtime")
+SCREENSHOT_VALIDATOR = Path("/tmp/keepmeter-runtime-screenshot-signal")
 DEFAULT_APP_PATH = Path("/tmp/keepmeter-debug-derived/Build/Products/Debug-iphonesimulator/KeepMeter.app")
 PERSISTENCE_SENTINEL = "keepmeter-runtime-persistence-ok.txt"
 LAUNCH_SENTINEL = "keepmeter-runtime-launch-ok.txt"
@@ -274,8 +275,6 @@ def launch(
     command_error: RuntimeSmokeError | None = None
     output = ""
     try:
-        # Hosted CoreSimulator often delivers the request but keeps simctl attached.
-        # The Swift-side active-scene sentinel below is authoritative.
         result = simctl(args, timeout=15)
         output = result.stdout.strip()
         if f"{BUNDLE_ID}:" not in output:
@@ -284,16 +283,12 @@ def launch(
         command_error = exc
         print(f"Launch command did not return cleanly; verifying foreground execution: {exc}", flush=True)
 
-    # Give the requested process a short opportunity to become foreground-active.
     for attempt in range(1, 11):
         if matching_host_sentinel(udid, LAUNCH_SENTINEL, launch_token) is not None:
             print(f"✓ Active SwiftUI scene verified on poll {attempt}/10", flush=True)
             return output or f"{BUNDLE_ID}: verified-by-active-scene-sentinel"
         time.sleep(1)
 
-    # A hosted runner can start the app process without foregrounding its scene. Re-issuing
-    # a plain launch request brings an already-running process to the foreground while its
-    # original process arguments (and unique probe token) remain intact.
     print("Active scene not visible yet; nudging KeepMeter to the foreground", flush=True)
     try:
         simctl(["launch", udid, BUNDLE_ID], timeout=10, check=False)
@@ -323,6 +318,7 @@ def screenshot(udid: str, filename: str) -> Path:
     if not path.is_file() or path.stat().st_size == 0:
         raise RuntimeSmokeError(f"Runtime screenshot is missing or empty: {path}")
     command(["sips", "-g", "pixelWidth", "-g", "pixelHeight", str(path)], timeout=15)
+    command([str(SCREENSHOT_VALIDATOR), str(path)], timeout=20)
     return path
 
 
@@ -346,6 +342,11 @@ def main() -> int:
         shutil.rmtree(SCREENSHOT_DIR)
     SCREENSHOT_DIR.mkdir(parents=True)
 
+    command(
+        ["xcrun", "swiftc", "ci/RuntimeScreenshotSignal.swift", "-o", str(SCREENSHOT_VALIDATOR)],
+        timeout=90,
+    )
+
     udid, name, version = select_simulator()
     print(f"Using simulator: {name}, iOS {version[0]}.{version[1]}, {udid}", flush=True)
 
@@ -366,14 +367,11 @@ def main() -> int:
             timeout=10,
         )
 
-        # 1) Fresh install onboarding: no QA seed data yet.
         simctl(["ui", udid, "appearance", "light"], timeout=20)
         launch(udid, "en", "en_US", onboarding=False, terminate=True)
         time.sleep(5)
         screenshot(udid, "onboarding-en-light.png")
 
-        # 2) DEBUG-only seed: render a realistic populated dashboard with both a
-        # KEEP candidate and an urgent RETURN? candidate.
         launch(
             udid,
             "en",
@@ -382,13 +380,9 @@ def main() -> int:
             terminate=True,
             extra_arguments=["--keepMeterRuntimeSeed"],
         )
-        # Fresh simulator boots can surface one-time system banners. Let them clear so
-        # the artifact represents KeepMeter rather than transient SpringBoard UI.
         time.sleep(10)
         screenshot(udid, "dashboard-populated-en-light.png")
 
-        # 3) Relaunch WITHOUT the seed flag. The DEBUG persistence probe only reads
-        # SwiftData and writes a sentinel when the expected records/usage/statuses survived.
         simctl(["ui", udid, "appearance", "dark"], timeout=20)
         remove_host_sentinels(udid, PERSISTENCE_SENTINEL)
         launch(
@@ -403,8 +397,6 @@ def main() -> int:
         time.sleep(8)
         screenshot(udid, "dashboard-persisted-de-dark.png")
 
-        # 4) Final clean relaunch: only the generic DEBUG foreground launch probe remains;
-        # there are no seed/persistence-probe arguments. A new token proves a new active scene.
         launch(udid, "de", "de_DE", onboarding=True, terminate=True)
         time.sleep(3)
 
@@ -414,7 +406,7 @@ def main() -> int:
         print("✓ Seeded purchases survived terminate/relaunch without reseeding", flush=True)
         print("✓ Persisted Dark/German dashboard rendered from an active scene", flush=True)
         print("✓ Final clean relaunch reached an active SwiftUI scene without seed/probe arguments", flush=True)
-        print("✓ Populated runtime screenshots captured", flush=True)
+        print("✓ Runtime screenshots passed visual-signal validation", flush=True)
         print("KeepMeter populated simulator runtime smoke passed", flush=True)
         return 0
     finally:
