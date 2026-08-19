@@ -1,10 +1,10 @@
 # KeepMeter — Project State
 
 Last updated: 2026-08-19
-Status: ACTIVE — APP STORE HANDOFF + ARM64 RUNTIME + REQUIRED STOREKIT ENTITLEMENT + GUARDED TESTFLIGHT LANE + SIGNING PREFLIGHT GREEN / APPLE DEVICE + ASC GATES OPEN
+Status: ACTIVE — APP STORE CONNECT HANDOFF CI-GATED + ARM64 RUNTIME + REQUIRED STOREKIT ENTITLEMENT + GUARDED TESTFLIGHT LANE + SIGNING PREFLIGHT GREEN / LIVE URL + APPLE ACCOUNT + PHYSICAL DEVICE GATES OPEN
 Repository: `acciento89-bot/keepmeter`
 Default branch: `main`
-Current verified product checkpoint: `8828fc2f706d2dec44ea48536d4928026aaa9d75`
+Current verified product checkpoint: `968987a52bc675b27451785618a6132fe3eee538`
 
 ## Handoff rule
 
@@ -40,7 +40,7 @@ Core loop: **Bought -> Use -> Measure -> Decide before deadline.**
 - No subscription in v1.
 - No required account/backend/bank/inbox integration.
 
-## Native target
+## Native target / App Store identity
 
 - SwiftUI + SwiftData + UserNotifications + StoreKit 2.
 - iOS 17+; iPhone only.
@@ -51,6 +51,8 @@ Core loop: **Bought -> Use -> Measure -> Decide before deadline.**
 - Target uses Automatic Signing.
 - Gate #20 locks Apple team `TKG684N5GL` in versioned signing configuration and CI preflight.
 - Gate #22 locks the first manual TestFlight lane to exact release identity `0.1.0 (1)` until deliberately changed.
+- Gate #23 locks the prepared App Store Connect record values in `metadata/AppStoreConnectSetup.json`: platform iOS, name `KeepMeter`, primary language German, bundle `de.kamilunavo.keepmeter`, SKU `keepmeter-ios-001`, Utilities, Free base app, version `0.1.0`, build `1`.
+- Gate #23 deliberately leaves Apple-account DSA trader status unresolved for verification in App Store Connect; repository data is not treated as a legal determination.
 
 ## DecisionEngine + AccessPolicy
 
@@ -87,6 +89,7 @@ Automated evidence:
 - Gate #20 reran the complete running-app persistence/visual path after signing/runtime hardening and passed unchanged.
 - Gate #21 required-CI promotion reran the same full normal runtime/Release pipeline on workflow `32284909516` and passed unchanged alongside the now-required StoreKit entitlement job.
 - Gate #22 reran the complete normal runtime/Release pipeline on workflow `32287632445` after adding the guarded manual TestFlight lane; persistence/runtime remained green.
+- Gate #23 reran the complete normal runtime/Release pipeline on workflow `32290236121` after adding the machine-readable App Store Connect setup and required handoff preflight; persistence/runtime remained green.
 
 Still open:
 - equivalent force-quit/relaunch check on a physical iPhone.
@@ -97,8 +100,9 @@ Product identity locked in main:
 - Type: Non-Consumable.
 - Reference Name: `KeepMeter Lifetime Pro`.
 - Product ID: `de.kamilunavo.keepmeter.pro.lifetime`.
-- Germany launch-price decision: **€9.99 one-time** / matching App Store Connect price point.
+- Germany launch-price decision: **€9.99 one-time** / matching current App Store Connect price point.
 - No subscription in v1.
+- Family Sharing off for v1.
 
 Localized customer metadata locked in main:
 - DE Display Name: `KeepMeter Pro – Lifetime`.
@@ -116,25 +120,40 @@ Implemented/hardened:
 - access refresh occurs before `transaction.finish()`.
 - unverified transactions never unlock Pro.
 - `AppStore.sync()` only behind explicit Restore Purchases.
-- `docs/IAP_LIFETIME_PRO.md` is the exact App Store Connect IAP handoff.
+- `docs/IAP_LIFETIME_PRO.md` is the exact human App Store Connect IAP handoff.
 - Gate #21 adds a real iOS Simulator-hosted StoreKitTest/XCTest against the production `EntitlementStore` and exact `KeepMeter.storekit` Lifetime product.
 - the Gate #21 test proves Free start -> real `SKTestSession` Lifetime transaction -> Pro unlock through `Transaction.updates` / `Transaction.currentEntitlements` -> entitlement recovery in a newly-created `EntitlementStore` -> entitlement removal after clearing the StoreKitTest transaction.
 - external StoreKitTest transaction propagation uses a bounded ~5-second wait instead of an immediate race-prone assertion; no fake entitlement, DEBUG Pro bypass or weakened assertion is used.
-- the StoreKit job is now required CI: `continue-on-error` was removed in PR #25 and a StoreKit failure makes the workflow fail.
+- the StoreKit job is required CI: `continue-on-error` was removed in PR #25 and a StoreKit failure makes the workflow fail.
 - Gate #22 reran the required StoreKit lane unchanged in workflow `32287632445`; job `96180829076` passed before merge.
+- Gate #23 mirrored the exact Lifetime IAP into `metadata/AppStoreConnectSetup.json` and reran the required StoreKit lane unchanged; workflow `32290236121`, job `96189098313` passed before merge.
 
 Still open:
 - matching App Store Connect Lifetime IAP creation/configuration.
 - release-candidate IAP review screenshot.
 - sandbox/TestFlight purchase + entitlement + explicit Restore Purchases (`AppStore.sync()`) validation.
 
-## App Store listing handoff
+## App Store listing / App Store Connect handoff
 
-Gate #18 merged a machine-readable v1 source at `metadata/AppStoreListing.json` plus `ci/app-store-listing-preflight.py`.
+Gate #18 merged machine-readable v1 listing copy at `metadata/AppStoreListing.json` plus `ci/app-store-listing-preflight.py`.
 
-The preflight enforces Apple-facing size limits for DE/EN name, subtitle, promotional text, description and keyword bytes. Gate #18 workflow passed all listing checks before merge.
+Gate #23 adds:
+- `metadata/AppStoreConnectSetup.json` as the exact machine-readable ASC record/IAP/privacy/TestFlight setup source.
+- immutable prepared SKU `keepmeter-ios-001`.
+- `docs/APP_STORE_CONNECT_RUNBOOK.md` with the exact operational order from Apple account checks through first TestFlight and sandbox restore validation.
+- refreshed `docs/APP_STORE_RELEASE.md` and `docs/IAP_LIFETIME_PRO.md` aligned to Gates #21/#22/#23.
+- `ci/app-store-connect-handoff-preflight.py`, now a required normal-CI step.
 
-`docs/APP_STORE_RELEASE.md` remains the human release checklist and screenshot plan.
+The Gate #23 preflight cross-checks:
+- app-record platform/name/primary language/bundle/SKU/category/base-price/version/build.
+- DE/EN locale set against `metadata/AppStoreListing.json`.
+- Privacy and Support URL identities while retaining an explicit `liveVerified = false` deployment boundary.
+- Data Not Collected / Tracking No plus mandatory final-binary privacy recheck.
+- exact Lifetime Pro product identity, launch-price decision, localizations and App Review information requirements.
+- unresolved EU DSA account/app verification sentinel.
+- guarded TestFlight workflow path/main/confirmation/build-number-management and required ASC secret names.
+
+Do not retype Apple-facing metadata from old chat messages; use these repository sources.
 
 ## Privacy
 
@@ -148,6 +167,8 @@ Current v1 baseline:
 - Release bundle manifest must plist-match source.
 
 Gate #18 merged `docs/APP_PRIVACY_HANDOFF.md` with the current intended App Store privacy answer: **Data Not Collected / Tracking: No**, subject to a mandatory final binary re-audit. Re-audit immediately if analytics, crash SDKs, networking/data collection, push-token handling or other off-device data behavior is added.
+
+Gate #23 mirrors that handoff into `metadata/AppStoreConnectSetup.json` and makes the final-binary recheck flag mandatory in required CI. This remains a prepared answer, not proof that Apple-side App Privacy has been entered.
 
 ## Notifications
 
@@ -169,10 +190,10 @@ Still open:
 - native `ci/RuntimeScreenshotSignal.swift` rejects black/near-uniform screenshots.
 
 Latest required-CI runtime artifact:
-- Gate #22 workflow `32287632445`.
-- artifact `9378499165` (`keepmeter-runtime-screenshots`).
+- Gate #23 workflow `32290236121`.
+- artifact `9379371189` (`keepmeter-runtime-screenshots`).
 - runtime screenshot generation and native visual-signal validation passed.
-- this Gate #22 artifact was not manually inspected in this pass; the latest manually inspected screenshots remain Gate #20 artifact `9374353233`, which was clean for fresh EN/Light onboarding, populated EN/Light dashboard and persisted DE/Dark dashboard.
+- this Gate #23 artifact was not manually inspected in this pass; the latest manually inspected screenshots remain Gate #20 artifact `9374353233`, which was clean for fresh EN/Light onboarding, populated EN/Light dashboard and persisted DE/Dark dashboard.
 
 Still open:
 - broader all-important-screen physical-device Light/Dark review.
@@ -223,11 +244,21 @@ Gate #22 adds a guarded manual TestFlight release lane without weakening require
 - `ci/testflight-workflow-preflight.py` is required by normal CI and rejects automatic triggers or weakened safeguards.
 - normal CI only validates the upload workflow statically; it does not execute the TestFlight workflow, sign an archive or upload a build.
 
+Gate #23 adds an App Store Connect handoff gate without pretending to have Apple-side access:
+- exact prepared ASC app-record values live in `metadata/AppStoreConnectSetup.json`.
+- SKU `keepmeter-ios-001` is locked before app-record creation.
+- Privacy/Support URLs remain explicitly not-live-verified in repository state.
+- EU DSA trader status remains an explicit account/app verification item rather than a guessed legal answer.
+- `ci/app-store-connect-handoff-preflight.py` is required by normal CI and cross-checks the ASC setup against listing, IAP and TestFlight sources.
+- full normal runtime/Release and required StoreKit lanes remained green on workflow `32290236121` before merge.
+
 ## Website / public release pages
 
 Kamilunavo website source merge `afd809da2f814625b1cf45f6920c958897fb5398` added:
 - bilingual KeepMeter-specific privacy page source.
 - KeepMeter to the shared Kamilunavo support page.
+
+Kamilunavo website merge `6cf96be83b29e74ad5414cc02e4997d3508e6f57` further hardened `/support` for App Store use by adding the already-published operator/business address and a direct imprint link while keeping `support@kamilunavo.com` visible.
 
 Intended App Store URLs after live-deployment verification:
 - `https://kamilunavo.com/keepmeter/privacy`
@@ -263,7 +294,10 @@ Gate #22 merged and verifies:
 - `ci/testflight-workflow-preflight.py` is part of required normal CI and passed in workflow `32287632445`.
 - full normal runtime/Release job `96180829650` and required StoreKit job `96180829076` passed before PR #27 merged.
 
-Gate #22 intentionally did not add ASC secrets, create an App Store Connect app/IAP, produce a signed archive or upload to TestFlight.
+Gate #23 verifies the prepared Apple-side handoff while preserving the credential boundary:
+- exact app-record/IAP/privacy/TestFlight values are machine-readable and CI-gated.
+- KeepMeter repository ASC secret names are locked, but the secrets themselves were not added.
+- no App Store Connect API was invoked, no signed physical-device archive was produced, and no TestFlight workflow was dispatched.
 
 ## Verified gates
 
@@ -275,12 +309,13 @@ Gate #22 intentionally did not add ASC secrets, create an App Store Connect app/
 20. PR #20 — Apple team/signing/archive preflight + same-device CoreSimulator lifecycle hardening — workflow `32276400054` — merge `4d63db7d32ec24ffd4beb59e506369e2c25ba2c1` — GREEN; artifact `9374353233` manually inspected.
 21. PR #24 + PR #25 — iOS Simulator StoreKitTest Lifetime entitlement proof + promotion to required CI. PR #24 fixed the asynchronous entitlement-propagation race and passed experimental StoreKit job `96167793044` in workflow `32283455910`, then merged as `e3c0bf0dea731e31a36a906b9431c0df6044f52f`. PR #25 removed `continue-on-error`, renamed the job to required `StoreKit entitlement XCTest`, and workflow `32284909516` passed both the required StoreKit job `96172034950` and full normal build job `96172035320`; StoreKit result: 1 test, 0 failures, `TEST SUCCEEDED`; merge `222464d21c888fdae5d01b07b6569a76ca2749a7` — GREEN. Historical PR #23 is not treated as Gate #21 proof because it merged while the experimental StoreKit job was still allowed to fail.
 22. PR #27 — guarded manual signed Archive/TestFlight lane + required static workflow-safety preflight — workflow `32287632445` — StoreKit job `96180829076` GREEN, full normal build/runtime/Release job `96180829650` GREEN, runtime artifact `9378499165` — merge `8828fc2f706d2dec44ea48536d4928026aaa9d75` — GREEN. No TestFlight workflow dispatch or upload occurred.
+23. PR #29 — exact App Store Connect machine-readable setup + immutable SKU + Apple-side release runbook + required ASC handoff preflight — workflow `32290236121` — StoreKit job `96189098313` GREEN, full normal build/runtime/Release job `96189098570` GREEN, runtime artifact `9379371189` — merge `968987a52bc675b27451785618a6132fe3eee538` — GREEN. No App Store Connect mutation, credential provisioning, signed archive or TestFlight upload occurred.
 
 Major product/source/design passes must remain CI-green before merge/TestFlight.
 
 ## Release status
 
-DONE / automated:
+DONE / automated or repository-prepared:
 - functional Debug + Release builds.
 - AppIcon and Privacy Manifest.
 - DecisionEngine / AccessPolicy / EN-DE regression tests.
@@ -288,16 +323,22 @@ DONE / automated:
 - representative Light/EN and Dark/DE visuals with anti-black-screen gate.
 - DEBUG QA isolation from Release binary.
 - required iOS CI proven on `macos-26` arm64 with bounded pre-install fallback and same-device recovery.
-- exact Lifetime Pro v1 IAP handoff.
+- exact Lifetime Pro v1 IAP identity/copy/price handoff.
 - required StoreKitTest/XCTest proof of the real Free -> Lifetime Pro entitlement/recovery/removal path on Xcode 26.2 / iOS 26.2.
 - exact DE/EN App Store listing source and field-limit checks.
 - App Privacy handoff.
 - Apple team `TKG684N5GL`, Automatic Signing and Release archive scheme locked by CI.
 - guarded manual TestFlight upload workflow prepared and CI-locked against automatic triggering or build-number drift.
+- exact App Store Connect app-record handoff prepared with SKU `keepmeter-ios-001` and required CI cross-check.
+- exact Apple-side operational runbook prepared.
+- Kamilunavo support source hardened with direct support/business contact information.
 
-OPEN:
-- live verification/deployment of public support/privacy URLs.
-- App Store Connect app record + Lifetime IAP creation/configuration.
+OPEN / external or device-only:
+- live deployment/verification of KeepMeter privacy and support URLs.
+- current Apple agreements/account access and DSA trader-status/app-setting verification.
+- App Store Connect app record creation using the locked bundle/SKU.
+- Lifetime IAP creation/configuration and review screenshot.
+- final App Store listing/App Privacy entry in App Store Connect.
 - KeepMeter repository ASC secret provisioning.
 - physical-device persistence/notification/VoiceOver/Dynamic Type checks.
 - first signed Release Archive.
@@ -308,9 +349,11 @@ No TestFlight build has been uploaded yet.
 
 ## Immediate next steps
 
-1. Verify/deploy public KeepMeter privacy/support pages when authenticated server deployment access is available.
-2. Create/configure the App Store Connect app record and Lifetime IAP when authenticated Apple-side access is available.
-3. Provision `ASC_ISSUER_ID`, `ASC_KEY_ID`, `ASC_PRIVATE_KEY_B64` in the KeepMeter repository only when the Apple-side record is ready.
-4. Perform physical-device notification/persistence/accessibility gates.
-5. When steps 1–4 are ready, manually dispatch `KeepMeter TestFlight` from `main` with confirmation `UPLOAD_KEEP_METER_0_1_0_BUILD_1`; that single run creates the signed Release Archive and uploads exact build `0.1.0 (1)`.
-6. Validate the real sandbox/TestFlight Lifetime Pro purchase, entitlement and explicit Restore Purchases path before App Store submission.
+1. Deploy/verify `https://kamilunavo.com/keepmeter/privacy` and `https://kamilunavo.com/support` live when authenticated server/Portainer deployment access is available.
+2. In App Store Connect, verify current agreements/account access and the EU DSA trader-status/account/app setting; do not infer this from repository state.
+3. Create the KeepMeter App Store Connect record using the exact repository handoff: iOS, `KeepMeter`, German primary language, bundle `de.kamilunavo.keepmeter`, SKU `keepmeter-ios-001`, Utilities, Free app, version `0.1.0`.
+4. Create/configure Lifetime Pro exactly as `de.kamilunavo.keepmeter.pro.lifetime`, Non-Consumable, €9.99 Germany launch decision, DE/EN metadata, reviewer notes and release-candidate review screenshot.
+5. Provision `ASC_ISSUER_ID`, `ASC_KEY_ID`, `ASC_PRIVATE_KEY_B64` in the KeepMeter repository only after the Apple-side record is correct.
+6. Perform the physical-device persistence/notification/accessibility preflight.
+7. When steps 1–6 are ready, manually dispatch `KeepMeter TestFlight` from `main` with confirmation `UPLOAD_KEEP_METER_0_1_0_BUILD_1`; that single run creates the signed Release Archive and uploads exact build `0.1.0 (1)`.
+8. Validate the real sandbox/TestFlight Lifetime Pro purchase, entitlement persistence and explicit Restore Purchases path before App Store submission.
