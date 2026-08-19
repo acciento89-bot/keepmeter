@@ -12,6 +12,7 @@ from pathlib import Path
 BUNDLE_ID = "de.kamilunavo.keepmeter"
 SCREENSHOT_DIR = Path("/tmp/keepmeter-runtime")
 DEFAULT_APP_PATH = Path("/tmp/keepmeter-debug-derived/Build/Products/Debug-iphonesimulator/KeepMeter.app")
+PERSISTENCE_SENTINEL = "keepmeter-runtime-persistence-ok.txt"
 
 
 class RuntimeSmokeError(RuntimeError):
@@ -125,8 +126,6 @@ def wait_for_boot(udid: str) -> None:
             f"Simulator did not reach Booted state inside the bounded boot window; last state: {last_state}"
         )
 
-    # 'Booted' is only a CoreSimulator lifecycle state. Wait for the simulator's boot
-    # services (SpringBoard/MobileInstallation included) before attempting app install.
     try:
         simctl(["bootstatus", udid, "-b"], timeout=90)
         print("✓ Simulator boot services report ready", flush=True)
@@ -158,15 +157,11 @@ def app_container(udid: str, kind: str = "app") -> Path | None:
 
 
 def ensure_installed(udid: str, app_path: Path) -> Path:
-    # Hosted CI starts from a fresh runner; avoid an unconditional uninstall because
-    # MobileInstallation can still be settling and uninstall itself can block.
     print("Installing KeepMeter into the booted simulator…", flush=True)
     try:
         simctl(["install", udid, str(app_path)], timeout=90)
         print("✓ simctl install returned successfully", flush=True)
     except RuntimeSmokeError as exc:
-        # The client can time out even if CoreSimulator completes the request later.
-        # The installed app container is the source of truth.
         print(f"Install command did not return cleanly; polling installation state: {exc}", flush=True)
 
     for attempt in range(1, 21):
@@ -182,7 +177,14 @@ def ensure_installed(udid: str, app_path: Path) -> Path:
     )
 
 
-def launch(udid: str, language: str, locale: str, onboarding: bool, terminate: bool) -> str:
+def launch(
+    udid: str,
+    language: str,
+    locale: str,
+    onboarding: bool,
+    terminate: bool,
+    extra_arguments: list[str] | None = None,
+) -> str:
     args = ["launch"]
     if terminate:
         args.append("--terminate-running-process")
@@ -196,6 +198,9 @@ def launch(udid: str, language: str, locale: str, onboarding: bool, terminate: b
         "-hasCompletedOnboarding",
         "YES" if onboarding else "NO",
     ])
+    if extra_arguments:
+        args.extend(extra_arguments)
+
     result = simctl(args, timeout=45)
     output = result.stdout.strip()
     if f"{BUNDLE_ID}:" not in output:
@@ -210,6 +215,22 @@ def screenshot(udid: str, filename: str) -> Path:
         raise RuntimeSmokeError(f"Runtime screenshot is missing or empty: {path}")
     command(["sips", "-g", "pixelWidth", "-g", "pixelHeight", str(path)], timeout=15)
     return path
+
+
+def require_persistence_sentinel(udid: str) -> Path:
+    for attempt in range(1, 16):
+        data_container = app_container(udid, "data")
+        if data_container is not None:
+            sentinel = data_container / "Documents" / PERSISTENCE_SENTINEL
+            if sentinel.is_file() and sentinel.read_text(encoding="utf-8").strip() == "ok":
+                print(f"✓ Runtime SwiftData persistence sentinel found on poll {attempt}/15", flush=True)
+                return sentinel
+        print(f"Persistence sentinel [{attempt}/15]: not ready yet", flush=True)
+        time.sleep(1)
+
+    raise RuntimeSmokeError(
+        "Debug persistence probe did not verify the seeded SwiftData purchases after terminate/relaunch"
+    )
 
 
 def main() -> int:
@@ -229,12 +250,6 @@ def main() -> int:
         installed_app = ensure_installed(udid, app_path)
         print(f"✓ App installed at {installed_app}", flush=True)
 
-        data_container = app_container(udid, "data")
-        if data_container is None:
-            print("Data container is not materialized before first launch; continuing", flush=True)
-        else:
-            print(f"✓ App data container exists at {data_container}", flush=True)
-
         best_effort_simctl(
             [
                 "status_bar", udid, "override",
@@ -247,30 +262,60 @@ def main() -> int:
             timeout=10,
         )
 
+        # 1) Fresh install onboarding: no QA seed data yet.
         simctl(["ui", udid, "appearance", "light"], timeout=20)
         launch(udid, "en", "en_US", onboarding=False, terminate=True)
         time.sleep(3)
         screenshot(udid, "onboarding-en-light.png")
-
         best_effort_simctl(["terminate", udid, BUNDLE_ID], timeout=15)
 
+        # 2) DEBUG-only seed: render a realistic populated dashboard with both a
+        # KEEP candidate and an urgent RETURN? candidate.
+        launch(
+            udid,
+            "en",
+            "en_US",
+            onboarding=True,
+            terminate=False,
+            extra_arguments=["--keepMeterRuntimeSeed"],
+        )
+        time.sleep(4)
+        screenshot(udid, "dashboard-populated-en-light.png")
+        best_effort_simctl(["terminate", udid, BUNDLE_ID], timeout=15)
+
+        # 3) Relaunch WITHOUT the seed flag. The DEBUG probe only reads SwiftData and
+        # writes a sentinel when the expected persisted records/usage/statuses survived.
         simctl(["ui", udid, "appearance", "dark"], timeout=20)
-        launch(udid, "de", "de_DE", onboarding=True, terminate=False)
-        time.sleep(3)
-        screenshot(udid, "dashboard-de-dark.png")
+        launch(
+            udid,
+            "de",
+            "de_DE",
+            onboarding=True,
+            terminate=False,
+            extra_arguments=["--keepMeterRuntimeProbe"],
+        )
+        time.sleep(4)
+        require_persistence_sentinel(udid)
+        screenshot(udid, "dashboard-persisted-de-dark.png")
 
         best_effort_simctl(["terminate", udid, BUNDLE_ID], timeout=15)
+
+        # 4) Final clean relaunch: no seed/probe arguments. This proves the ordinary
+        # app still starts from the now-populated persisted store.
         launch(udid, "de", "de_DE", onboarding=True, terminate=False)
         time.sleep(2)
 
         if app_container(udid, "data") is None:
-            raise RuntimeSmokeError("App data container is still unavailable after successful launch")
+            raise RuntimeSmokeError("App data container is unavailable after successful populated relaunch")
 
-        print("✓ KeepMeter launched in Light/English runtime", flush=True)
-        print("✓ KeepMeter launched in Dark/German runtime", flush=True)
-        print("✓ KeepMeter terminated and relaunched successfully", flush=True)
-        print("✓ Runtime screenshots captured", flush=True)
-        print("KeepMeter simulator runtime smoke passed", flush=True)
+        print("✓ Fresh-install Light/English onboarding rendered", flush=True)
+        print("✓ DEBUG-only realistic purchase data seeded into SwiftData", flush=True)
+        print("✓ Populated Light/English dashboard rendered", flush=True)
+        print("✓ Seeded purchases survived terminate/relaunch without reseeding", flush=True)
+        print("✓ Persisted Dark/German dashboard rendered", flush=True)
+        print("✓ Final clean relaunch succeeded without QA arguments", flush=True)
+        print("✓ Populated runtime screenshots captured", flush=True)
+        print("KeepMeter populated simulator runtime smoke passed", flush=True)
         return 0
     finally:
         best_effort_simctl(["terminate", udid, BUNDLE_ID], timeout=8)
