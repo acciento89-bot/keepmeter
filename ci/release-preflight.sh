@@ -84,4 +84,51 @@ fi
 
 echo "✓ AppIcon asset catalog = AppIcon"
 echo "✓ AppIcon.png = 1024x1024, opaque"
+
+privacy_manifest="KeepMeter/PrivacyInfo.xcprivacy"
+if [[ ! -s "$privacy_manifest" ]]; then
+  echo "::error title=Privacy manifest::PrivacyInfo.xcprivacy is missing or empty"
+  exit 1
+fi
+
+plutil -lint "$privacy_manifest" >/dev/null
+grep -F 'PrivacyInfo.xcprivacy in Resources' KeepMeter.xcodeproj/project.pbxproj >/dev/null
+
+python3 - <<'PY'
+import plistlib
+from pathlib import Path
+
+path = Path("KeepMeter/PrivacyInfo.xcprivacy")
+with path.open("rb") as handle:
+    manifest = plistlib.load(handle)
+
+if manifest.get("NSPrivacyTracking") is not False:
+    raise SystemExit("Privacy manifest must explicitly declare NSPrivacyTracking = false")
+
+if manifest.get("NSPrivacyTrackingDomains") != []:
+    raise SystemExit("KeepMeter v1 must not declare tracking domains")
+
+if manifest.get("NSPrivacyCollectedDataTypes") != []:
+    raise SystemExit("KeepMeter v1 local-first manifest must not declare collected data types")
+
+entries = manifest.get("NSPrivacyAccessedAPITypes")
+if not isinstance(entries, list):
+    raise SystemExit("NSPrivacyAccessedAPITypes must be an array")
+
+user_defaults_entries = [
+    entry for entry in entries
+    if entry.get("NSPrivacyAccessedAPIType") == "NSPrivacyAccessedAPICategoryUserDefaults"
+]
+
+if len(user_defaults_entries) != 1:
+    raise SystemExit("Exactly one UserDefaults required-reason entry is required")
+
+reasons = user_defaults_entries[0].get("NSPrivacyAccessedAPITypeReasons")
+if reasons != ["CA92.1"]:
+    raise SystemExit(f"UserDefaults reasons must be exactly ['CA92.1']; found {reasons!r}")
+
+print("✓ Privacy manifest declares no tracking/no collected data for current v1")
+print("✓ UserDefaults required reason = CA92.1")
+PY
+
 echo "KeepMeter Release preflight completed"
