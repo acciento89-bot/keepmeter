@@ -64,7 +64,7 @@ def best_effort_simctl(args: list[str], *, timeout: int) -> None:
 
 
 def available_devices() -> dict:
-    completed = simctl(["list", "devices", "available", "-j"], timeout=10, quiet=True)
+    completed = simctl(["list", "devices", "available", "-j"], timeout=8, quiet=True)
     return json.loads(completed.stdout)
 
 
@@ -104,35 +104,42 @@ def wait_for_boot(udid: str) -> None:
     try:
         simctl(["boot", udid], timeout=12, check=False)
     except RuntimeSmokeError as exc:
-        # Hosted runners can leave the simctl client attached even while CoreSimulator
-        # continues booting. Device state, not command return, is authoritative here.
         print(f"Boot command did not return promptly; continuing with state polling: {exc}", flush=True)
 
     last_state = "Unknown"
-    for attempt in range(1, 61):
+    for attempt in range(1, 46):
         try:
             last_state = device_state(udid)
         except RuntimeSmokeError as exc:
-            print(f"Simulator state poll [{attempt}/60] transient error: {exc}", flush=True)
+            print(f"Simulator state poll [{attempt}/45] transient error: {exc}", flush=True)
             time.sleep(2)
             continue
 
-        print(f"Simulator state [{attempt}/60]: {last_state}", flush=True)
+        print(f"Simulator state [{attempt}/45]: {last_state}", flush=True)
         if last_state == "Booted":
             print("✓ Simulator reached Booted state", flush=True)
-            return
+            break
         time.sleep(2)
+    else:
+        raise RuntimeSmokeError(
+            f"Simulator did not reach Booted state inside the bounded boot window; last state: {last_state}"
+        )
 
-    raise RuntimeSmokeError(
-        f"Simulator did not reach Booted state inside the bounded boot window; last state: {last_state}"
-    )
+    # 'Booted' is only a CoreSimulator lifecycle state. Wait for the simulator's boot
+    # services (SpringBoard/MobileInstallation included) before attempting app install.
+    try:
+        simctl(["bootstatus", udid, "-b"], timeout=90)
+        print("✓ Simulator boot services report ready", flush=True)
+    except RuntimeSmokeError as exc:
+        print(f"bootstatus did not complete; using a final bounded settle fallback: {exc}", flush=True)
+        time.sleep(15)
 
 
 def app_container(udid: str, kind: str = "app") -> Path | None:
     try:
         result = simctl(
             ["get_app_container", udid, BUNDLE_ID, kind],
-            timeout=8,
+            timeout=4,
             check=False,
             quiet=True,
         )
@@ -151,38 +158,23 @@ def app_container(udid: str, kind: str = "app") -> Path | None:
 
 
 def ensure_installed(udid: str, app_path: Path) -> Path:
-    # A fresh hosted runner should not have KeepMeter installed. Avoid an unconditional
-    # uninstall because MobileInstallation itself can still be warming up immediately
-    # after CoreSimulator reports the device as Booted.
-    existing = app_container(udid)
-    if existing is not None:
-        print(f"Existing KeepMeter install found at {existing}; removing it", flush=True)
-        best_effort_simctl(["uninstall", udid, BUNDLE_ID], timeout=20)
-
-    # Give SpringBoard/MobileInstallation a short bounded settle period after Booted.
-    print("Allowing simulator services to settle before app installation…", flush=True)
-    time.sleep(12)
-
-    install_returned = False
+    # Hosted CI starts from a fresh runner; avoid an unconditional uninstall because
+    # MobileInstallation can still be settling and uninstall itself can block.
+    print("Installing KeepMeter into the booted simulator…", flush=True)
     try:
-        simctl(["install", udid, str(app_path)], timeout=60)
-        install_returned = True
+        simctl(["install", udid, str(app_path)], timeout=90)
         print("✓ simctl install returned successfully", flush=True)
     except RuntimeSmokeError as exc:
-        # CoreSimulator can complete an operation even when the client remains attached.
-        # Treat the installed app container as source of truth before declaring failure.
+        # The client can time out even if CoreSimulator completes the request later.
+        # The installed app container is the source of truth.
         print(f"Install command did not return cleanly; polling installation state: {exc}", flush=True)
 
-    for attempt in range(1, 46):
+    for attempt in range(1, 21):
         container = app_container(udid)
         if container is not None:
-            print(
-                f"✓ App installation resolved on poll {attempt}/45"
-                + (" after simctl returned" if install_returned else " after delayed install"),
-                flush=True,
-            )
+            print(f"✓ App installation resolved on poll {attempt}/20", flush=True)
             return container
-        print(f"Install state [{attempt}/45]: not visible yet", flush=True)
+        print(f"Install state [{attempt}/20]: not visible yet", flush=True)
         time.sleep(2)
 
     raise RuntimeSmokeError(
@@ -239,8 +231,6 @@ def main() -> int:
 
         data_container = app_container(udid, "data")
         if data_container is None:
-            # A data container can be materialized lazily. It is not required before the
-            # first launch; the app-container existence above proves installation.
             print("Data container is not materialized before first launch; continuing", flush=True)
         else:
             print(f"✓ App data container exists at {data_container}", flush=True)
@@ -283,7 +273,6 @@ def main() -> int:
         print("KeepMeter simulator runtime smoke passed", flush=True)
         return 0
     finally:
-        # Cleanup is deliberately best-effort so it can never hide the actual runtime failure.
         best_effort_simctl(["terminate", udid, BUNDLE_ID], timeout=8)
         best_effort_simctl(["shutdown", udid], timeout=15)
 
