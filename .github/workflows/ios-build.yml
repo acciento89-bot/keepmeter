@@ -155,10 +155,9 @@ jobs:
           print("✓ Bundled privacy manifest matches the source manifest")
           PY
 
-  storekit-experimental:
-    name: StoreKit entitlement XCTest (experimental)
+  storekit-entitlement:
+    name: StoreKit entitlement XCTest
     runs-on: macos-26
-    continue-on-error: true
 
     steps:
       - name: Checkout
