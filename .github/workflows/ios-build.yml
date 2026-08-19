@@ -156,7 +156,7 @@ jobs:
           PY
 
   storekit-experimental:
-    name: StoreKit entitlement smoke (experimental)
+    name: StoreKit entitlement XCTest (experimental)
     runs-on: macos-26
     continue-on-error: true
 
@@ -167,17 +167,16 @@ jobs:
       - name: Show Xcode version
         run: xcodebuild -version
 
-      - name: Compile StoreKitTest entitlement smoke
-        run: |
-          set -euo pipefail
-          xcrun --sdk macosx swiftc \
-            -parse-as-library \
-            KeepMeter/Services/EntitlementStore.swift \
-            ci/StoreKitEntitlementSmoke.swift \
-            -framework Combine \
-            -framework StoreKit \
-            -framework StoreKitTest \
-            -o /tmp/keepmeter-storekit-entitlement-smoke
-
       - name: Exercise Free to Lifetime Pro entitlement recovery
-        run: /tmp/keepmeter-storekit-entitlement-smoke
+        run: |
+          set -o pipefail
+          rm -rf /tmp/keepmeter-storekit-tests-derived
+          xcodebuild \
+            -project KeepMeter.xcodeproj \
+            -scheme KeepMeter \
+            -configuration Debug \
+            -destination 'platform=iOS Simulator,name=iPhone 17 Pro Max,OS=latest' \
+            -derivedDataPath /tmp/keepmeter-storekit-tests-derived \
+            CODE_SIGNING_ALLOWED=NO \
+            -only-testing:KeepMeterStoreKitTests/KeepMeterStoreKitTests/testLifetimePurchaseUnlocksAndRecoversAcrossStoreRecreation \
+            test
