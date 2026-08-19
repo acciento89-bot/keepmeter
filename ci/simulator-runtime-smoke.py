@@ -56,8 +56,15 @@ def simctl(args: list[str], *, timeout: int = 30, check: bool = True, quiet: boo
     return command(["xcrun", "simctl", *args], timeout=timeout, check=check, quiet=quiet)
 
 
+def best_effort_simctl(args: list[str], *, timeout: int) -> None:
+    try:
+        simctl(args, timeout=timeout, check=False, quiet=True)
+    except RuntimeSmokeError as exc:
+        print(f"Runtime cleanup warning: {exc}", flush=True)
+
+
 def available_devices() -> dict:
-    completed = simctl(["list", "devices", "available", "-j"], timeout=15, quiet=True)
+    completed = simctl(["list", "devices", "available", "-j"], timeout=10, quiet=True)
     return json.loads(completed.stdout)
 
 
@@ -94,15 +101,31 @@ def device_state(udid: str) -> str:
 
 
 def wait_for_boot(udid: str) -> None:
-    simctl(["boot", udid], timeout=15, check=False)
+    try:
+        simctl(["boot", udid], timeout=12, check=False)
+    except RuntimeSmokeError as exc:
+        # On hosted runners the simctl client itself can remain attached while CoreSimulator
+        # continues booting in the background. The state poll below is authoritative.
+        print(f"Boot command did not return promptly; continuing with state polling: {exc}", flush=True)
+
+    last_state = "Unknown"
     for attempt in range(1, 61):
-        state = device_state(udid)
-        print(f"Simulator state [{attempt}/60]: {state}", flush=True)
-        if state == "Booted":
+        try:
+            last_state = device_state(udid)
+        except RuntimeSmokeError as exc:
+            print(f"Simulator state poll [{attempt}/60] transient error: {exc}", flush=True)
+            time.sleep(2)
+            continue
+
+        print(f"Simulator state [{attempt}/60]: {last_state}", flush=True)
+        if last_state == "Booted":
             print("✓ Simulator reached Booted state", flush=True)
             return
         time.sleep(2)
-    raise RuntimeSmokeError("Simulator did not reach Booted state inside the bounded boot window")
+
+    raise RuntimeSmokeError(
+        f"Simulator did not reach Booted state inside the bounded boot window; last state: {last_state}"
+    )
 
 
 def launch(udid: str, language: str, locale: str, onboarding: bool, terminate: bool) -> str:
@@ -150,7 +173,7 @@ def main() -> int:
     try:
         wait_for_boot(udid)
 
-        simctl(["uninstall", udid, BUNDLE_ID], timeout=15, check=False, quiet=True)
+        best_effort_simctl(["uninstall", udid, BUNDLE_ID], timeout=10)
         simctl(["install", udid, str(app_path)], timeout=45)
 
         container = simctl(["get_app_container", udid, BUNDLE_ID, "data"], timeout=15).stdout.strip()
@@ -158,7 +181,7 @@ def main() -> int:
             raise RuntimeSmokeError("Installed app data container could not be resolved")
         print("✓ App installed and data container exists", flush=True)
 
-        simctl(
+        best_effort_simctl(
             [
                 "status_bar", udid, "override",
                 "--time", "09:41",
@@ -168,8 +191,6 @@ def main() -> int:
                 "--cellularBars", "4",
             ],
             timeout=10,
-            check=False,
-            quiet=True,
         )
 
         simctl(["ui", udid, "appearance", "light"], timeout=15)
@@ -195,8 +216,9 @@ def main() -> int:
         print("KeepMeter simulator runtime smoke passed", flush=True)
         return 0
     finally:
-        simctl(["terminate", udid, BUNDLE_ID], timeout=10, check=False, quiet=True)
-        simctl(["shutdown", udid], timeout=20, check=False, quiet=True)
+        # Cleanup is deliberately best-effort so it can never hide the actual runtime failure.
+        best_effort_simctl(["terminate", udid, BUNDLE_ID], timeout=8)
+        best_effort_simctl(["shutdown", udid], timeout=15)
 
 
 if __name__ == "__main__":
