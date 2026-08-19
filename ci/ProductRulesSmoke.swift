@@ -86,16 +86,46 @@ struct ProductRulesSmoke {
             purchaseDate: reference,
             returnDeadline: calendar.date(byAdding: .day, value: -1, to: reference)!
         )
-        try expect(malformedWindow.returnWindowElapsedRatio(referenceDate: reference) == 1, "Invalid/non-positive return windows must clamp to elapsed ratio 1")
+        try expect(
+            malformedWindow.returnWindowElapsedRatio(referenceDate: reference) == 1,
+            "Invalid/non-positive return windows must clamp to elapsed ratio 1"
+        )
 
-        let dashboardSource = try String(contentsOfFile: "KeepMeter/Views/DashboardView.swift", encoding: .utf8)
-        try expect(dashboardSource.contains("private let freeActivePurchaseLimit = 5"), "Free active purchase limit must remain 5 in v1")
-        try expect(dashboardSource.contains("activePurchases.count >= freeActivePurchaseLimit"), "Dashboard must enforce the free limit before presenting Add Purchase")
+        try expect(AccessPolicy.freeActivePurchaseLimit == 5, "Free active purchase limit must remain 5 in v1")
+        try expect(
+            AccessPolicy.canAddActivePurchase(activePurchaseCount: 0, isPro: false),
+            "Free user must be able to add first active purchase"
+        )
+        try expect(
+            AccessPolicy.canAddActivePurchase(activePurchaseCount: 4, isPro: false),
+            "Free user must be able to add the fifth active purchase"
+        )
+        try expect(
+            !AccessPolicy.canAddActivePurchase(activePurchaseCount: 5, isPro: false),
+            "Free user must be blocked from adding a sixth active purchase"
+        )
+        try expect(
+            AccessPolicy.hasReachedFreeLimit(activePurchaseCount: 5, isPro: false),
+            "Free limit state must be reached at five active purchases"
+        )
+        try expect(
+            AccessPolicy.canAddActivePurchase(activePurchaseCount: 5, isPro: true),
+            "Lifetime Pro must bypass the free active-purchase limit"
+        )
+        try expect(
+            AccessPolicy.canAddActivePurchase(activePurchaseCount: 50, isPro: true),
+            "Lifetime Pro must remain unlimited at higher active-purchase counts"
+        )
+        try expect(
+            !AccessPolicy.hasReachedFreeLimit(activePurchaseCount: 50, isPro: true),
+            "Lifetime Pro must never report the Free limit as reached"
+        )
 
         print("✓ DecisionEngine branch coverage")
         print("✓ Cost-per-use behavior")
         print("✓ Invalid return-window clamp")
-        print("✓ Free-tier UI contract = 5 active purchases")
+        print("✓ Central AccessPolicy = 5 active purchases for Free")
+        print("✓ Lifetime Pro bypasses the active-purchase limit")
         print("KeepMeter product rule smoke passed")
     }
 }
