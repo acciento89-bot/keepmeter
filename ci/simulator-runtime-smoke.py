@@ -203,6 +203,17 @@ def sentinel_candidates(udid: str, filename: str) -> list[Path]:
     return list(root.glob(f"*/Documents/{filename}"))
 
 
+def matching_host_sentinel(udid: str, filename: str, expected_content: str) -> Path | None:
+    for path in sentinel_candidates(udid, filename):
+        try:
+            content = path.read_text(encoding="utf-8").strip()
+        except (FileNotFoundError, OSError, UnicodeError):
+            continue
+        if content == expected_content:
+            return path
+    return None
+
+
 def remove_host_sentinels(udid: str, filename: str) -> None:
     for path in sentinel_candidates(udid, filename):
         try:
@@ -221,14 +232,10 @@ def wait_for_host_sentinel(
     label: str,
 ) -> Path:
     for attempt in range(1, attempts + 1):
-        for path in sentinel_candidates(udid, filename):
-            try:
-                content = path.read_text(encoding="utf-8").strip()
-            except (FileNotFoundError, OSError, UnicodeError):
-                continue
-            if content == expected_content:
-                print(f"✓ {label} verified on poll {attempt}/{attempts}", flush=True)
-                return path
+        path = matching_host_sentinel(udid, filename, expected_content)
+        if path is not None:
+            print(f"✓ {label} verified on poll {attempt}/{attempts}", flush=True)
+            return path
         print(f"{label} [{attempt}/{attempts}]: not ready yet", flush=True)
         time.sleep(interval)
 
@@ -267,32 +274,47 @@ def launch(
     command_error: RuntimeSmokeError | None = None
     output = ""
     try:
-        # Hosted CoreSimulator often delivers the launch request but keeps the simctl
-        # client attached. The unique Swift-side sentinel below is the source of truth,
-        # so this client timeout is intentionally short and non-authoritative.
+        # Hosted CoreSimulator often delivers the request but keeps simctl attached.
+        # The Swift-side active-scene sentinel below is authoritative.
         result = simctl(args, timeout=15)
         output = result.stdout.strip()
         if f"{BUNDLE_ID}:" not in output:
-            print(f"Launch returned unexpected output; using Swift launch probe as authority: {output!r}", flush=True)
+            print(f"Launch returned unexpected output; using active-scene probe as authority: {output!r}", flush=True)
     except RuntimeSmokeError as exc:
         command_error = exc
-        print(f"Launch command did not return cleanly; verifying actual app execution: {exc}", flush=True)
+        print(f"Launch command did not return cleanly; verifying foreground execution: {exc}", flush=True)
+
+    # Give the requested process a short opportunity to become foreground-active.
+    for attempt in range(1, 11):
+        if matching_host_sentinel(udid, LAUNCH_SENTINEL, launch_token) is not None:
+            print(f"✓ Active SwiftUI scene verified on poll {attempt}/10", flush=True)
+            return output or f"{BUNDLE_ID}: verified-by-active-scene-sentinel"
+        time.sleep(1)
+
+    # A hosted runner can start the app process without foregrounding its scene. Re-issuing
+    # a plain launch request brings an already-running process to the foreground while its
+    # original process arguments (and unique probe token) remain intact.
+    print("Active scene not visible yet; nudging KeepMeter to the foreground", flush=True)
+    try:
+        simctl(["launch", udid, BUNDLE_ID], timeout=10, check=False)
+    except RuntimeSmokeError as exc:
+        print(f"Foreground nudge did not return promptly: {exc}", flush=True)
 
     try:
         wait_for_host_sentinel(
             udid,
             LAUNCH_SENTINEL,
             launch_token,
-            attempts=45,
+            attempts=35,
             interval=1,
-            label="SwiftUI launch sentinel",
+            label="Active SwiftUI scene sentinel",
         )
     except RuntimeSmokeError as exc:
         if command_error is not None:
             raise RuntimeSmokeError(f"{command_error}; additionally, {exc}") from exc
         raise
 
-    return output or f"{BUNDLE_ID}: verified-by-runtime-sentinel"
+    return output or f"{BUNDLE_ID}: verified-by-active-scene-sentinel"
 
 
 def screenshot(udid: str, filename: str) -> Path:
@@ -347,13 +369,11 @@ def main() -> int:
         # 1) Fresh install onboarding: no QA seed data yet.
         simctl(["ui", udid, "appearance", "light"], timeout=20)
         launch(udid, "en", "en_US", onboarding=False, terminate=True)
-        time.sleep(3)
+        time.sleep(5)
         screenshot(udid, "onboarding-en-light.png")
 
         # 2) DEBUG-only seed: render a realistic populated dashboard with both a
-        # KEEP candidate and an urgent RETURN? candidate. Each launch carries a unique
-        # DEBUG token; the host-side sentinel proves Swift code actually executed even
-        # when the hosted runner's simctl client does not return promptly.
+        # KEEP candidate and an urgent RETURN? candidate.
         launch(
             udid,
             "en",
@@ -362,7 +382,9 @@ def main() -> int:
             terminate=True,
             extra_arguments=["--keepMeterRuntimeSeed"],
         )
-        time.sleep(4)
+        # Fresh simulator boots can surface one-time system banners. Let them clear so
+        # the artifact represents KeepMeter rather than transient SpringBoard UI.
+        time.sleep(10)
         screenshot(udid, "dashboard-populated-en-light.png")
 
         # 3) Relaunch WITHOUT the seed flag. The DEBUG persistence probe only reads
@@ -378,20 +400,20 @@ def main() -> int:
             extra_arguments=["--keepMeterRuntimeProbe"],
         )
         require_persistence_sentinel(udid)
-        time.sleep(2)
+        time.sleep(8)
         screenshot(udid, "dashboard-persisted-de-dark.png")
 
-        # 4) Final clean relaunch: only the generic DEBUG launch probe remains; there
-        # are no seed/persistence-probe arguments. A new token proves a new app launch.
+        # 4) Final clean relaunch: only the generic DEBUG foreground launch probe remains;
+        # there are no seed/persistence-probe arguments. A new token proves a new active scene.
         launch(udid, "de", "de_DE", onboarding=True, terminate=True)
-        time.sleep(2)
+        time.sleep(3)
 
         print("✓ Fresh-install Light/English onboarding rendered", flush=True)
         print("✓ DEBUG-only realistic purchase data seeded into SwiftData", flush=True)
         print("✓ Populated Light/English dashboard rendered", flush=True)
         print("✓ Seeded purchases survived terminate/relaunch without reseeding", flush=True)
-        print("✓ Persisted Dark/German dashboard rendered", flush=True)
-        print("✓ Final clean relaunch executed Swift code without seed/probe arguments", flush=True)
+        print("✓ Persisted Dark/German dashboard rendered from an active scene", flush=True)
+        print("✓ Final clean relaunch reached an active SwiftUI scene without seed/probe arguments", flush=True)
         print("✓ Populated runtime screenshots captured", flush=True)
         print("KeepMeter populated simulator runtime smoke passed", flush=True)
         return 0
