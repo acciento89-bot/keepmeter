@@ -1,0 +1,166 @@
+name: KeepMeter TestFlight
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_upload:
+        description: 'Type UPLOAD_KEEP_METER_0_1_0_BUILD_1 to upload KeepMeter 0.1.0 (1)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: keepmeter-testflight
+  cancel-in-progress: false
+
+jobs:
+  upload:
+    runs-on: macos-26
+    timeout-minutes: 45
+    env:
+      TEAM_ID: TKG684N5GL
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+      CONFIRM_UPLOAD: ${{ inputs.confirm_upload }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Require intentional main-branch upload
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main" || {
+            echo "::error title=TestFlight guard::Uploads are allowed only from main; got $GITHUB_REF"
+            exit 1
+          }
+          test "$CONFIRM_UPLOAD" = "UPLOAD_KEEP_METER_0_1_0_BUILD_1" || {
+            echo "::error title=TestFlight guard::Confirmation phrase does not match KeepMeter 0.1.0 (1)"
+            exit 1
+          }
+          echo "✓ Explicit upload confirmation accepted for KeepMeter 0.1.0 (1)"
+
+      - name: Select proven Xcode toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
+          xcodebuild -version
+
+      - name: Validate release inputs before signing
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m json.tool KeepMeter/StoreKit/KeepMeter.storekit >/dev/null
+          python3 ci/storekit-metadata-preflight.py
+          python3 ci/app-store-listing-preflight.py
+          python3 ci/localization-preflight.py
+          bash ci/release-preflight.sh
+
+      - name: Require App Store Connect credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$ASC_ISSUER_ID" || { echo "::error title=TestFlight credentials::ASC_ISSUER_ID is missing"; exit 1; }
+          test -n "$ASC_KEY_ID" || { echo "::error title=TestFlight credentials::ASC_KEY_ID is missing"; exit 1; }
+          test -n "$ASC_PRIVATE_KEY_B64" || { echo "::error title=TestFlight credentials::ASC_PRIVATE_KEY_B64 is missing"; exit 1; }
+
+      - name: Materialize App Store Connect API key
+        shell: bash
+        run: |
+          set -euo pipefail
+          KEY_PATH="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          grep -q "BEGIN PRIVATE KEY" "$KEY_PATH" || {
+            echo "::error title=TestFlight credentials::ASC API key could not be decoded"
+            exit 1
+          }
+
+      - name: Archive signed KeepMeter Release
+        shell: bash
+        run: |
+          set -euo pipefail
+          KEY_PATH="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          rm -rf "$RUNNER_TEMP/KeepMeter.xcarchive"
+          xcodebuild \
+            -project KeepMeter.xcodeproj \
+            -scheme KeepMeter \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/KeepMeter.xcarchive" \
+            -xcconfig Config/Signing.xcconfig \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$KEY_PATH" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            archive
+
+      - name: Verify signed archive identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP="$RUNNER_TEMP/KeepMeter.xcarchive/Products/Applications/KeepMeter.app"
+          test -d "$APP"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+
+          BUNDLE_ID=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist")
+          VERSION=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist")
+          BUILD=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist")
+
+          test "$BUNDLE_ID" = "de.kamilunavo.keepmeter"
+          test "$VERSION" = "0.1.0"
+          test "$BUILD" = "1"
+
+          echo "✓ Signed archive identity = $BUNDLE_ID $VERSION ($BUILD)"
+          codesign -dvv "$APP" 2>&1 | grep -E 'Identifier=|Authority=|TeamIdentifier=' || true
+
+      - name: Create App Store Connect export options
+        shell: bash
+        run: |
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store-connect</string>
+            <key>destination</key>
+            <string>upload</string>
+            <key>signingStyle</key>
+            <string>automatic</string>
+            <key>teamID</key>
+            <string>$TEAM_ID</string>
+            <key>uploadSymbols</key>
+            <true/>
+            <key>manageAppVersionAndBuildNumber</key>
+            <false/>
+          </dict>
+          </plist>
+          PLIST
+          plutil -lint "$RUNNER_TEMP/ExportOptions.plist"
+
+      - name: Upload exact build to TestFlight with Apple Cloud Signing
+        shell: bash
+        run: |
+          set -euo pipefail
+          KEY_PATH="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          rm -rf "$RUNNER_TEMP/TestFlightExport"
+          xcodebuild \
+            -exportArchive \
+            -archivePath "$RUNNER_TEMP/KeepMeter.xcarchive" \
+            -exportPath "$RUNNER_TEMP/TestFlightExport" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$KEY_PATH" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+
+      - name: Remove App Store Connect API key
+        if: always()
+        shell: bash
+        run: rm -f "$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
