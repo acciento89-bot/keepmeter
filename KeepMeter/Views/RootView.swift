@@ -43,6 +43,7 @@ extension View {
 
 struct RootView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.scenePhase) private var scenePhase
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
 
     var body: some View {
@@ -83,6 +84,13 @@ struct RootView: View {
             runRuntimeSmokeHooksIfRequested()
             #endif
         }
+        .onChange(of: scenePhase) { _, newPhase in
+            #if DEBUG
+            if newPhase == .active {
+                writeRuntimeLaunchSentinelIfRequested()
+            }
+            #endif
+        }
     }
 
     #if DEBUG
@@ -95,10 +103,6 @@ struct RootView: View {
     private func runRuntimeSmokeHooksIfRequested() {
         let arguments = ProcessInfo.processInfo.arguments
 
-        if arguments.contains("--keepMeterRuntimeLaunchProbe") {
-            writeRuntimeLaunchSentinel(arguments: arguments)
-        }
-
         if arguments.contains("--keepMeterRuntimeSeed") {
             seedRuntimeSmokePurchases()
         }
@@ -106,9 +110,16 @@ struct RootView: View {
         if arguments.contains("--keepMeterRuntimeProbe") {
             writeRuntimePersistenceSentinelIfValid()
         }
+
+        if scenePhase == .active {
+            writeRuntimeLaunchSentinelIfRequested()
+        }
     }
 
-    private func writeRuntimeLaunchSentinel(arguments: [String]) {
+    private func writeRuntimeLaunchSentinelIfRequested() {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard arguments.contains("--keepMeterRuntimeLaunchProbe") else { return }
+
         guard
             let tokenArgument = arguments.first(where: { $0.hasPrefix(Self.runtimeLaunchTokenPrefix) }),
             !tokenArgument.dropFirst(Self.runtimeLaunchTokenPrefix.count).isEmpty
@@ -122,7 +133,7 @@ struct RootView: View {
         do {
             let sentinelURL = try runtimeSentinelURL(named: Self.runtimeLaunchSentinel)
             try token.write(to: sentinelURL, atomically: true, encoding: .utf8)
-            print("KeepMeter runtime smoke: launch probe reached SwiftUI root")
+            print("KeepMeter runtime smoke: launch probe reached an active SwiftUI scene")
         } catch {
             assertionFailure("KeepMeter runtime launch probe failed: \(error)")
         }
