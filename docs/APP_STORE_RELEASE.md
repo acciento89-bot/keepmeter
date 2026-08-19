@@ -1,7 +1,7 @@
 # KeepMeter — App Store Release Checklist
 
-Last updated: 2026-08-18
-Status: PRE-TESTFLIGHT / APPICON COMPLETE / RUNTIME + APP STORE CONNECT OPEN
+Last updated: 2026-08-19
+Status: PRE-TESTFLIGHT / AUTOMATED SIMULATOR QA GREEN / APP STORE CONNECT + DEVICE QA OPEN
 
 This file tracks App Store-facing release requirements. `docs/PROJECT_STATE.md` remains the authoritative overall project handoff.
 
@@ -13,14 +13,14 @@ This file tracks App Store-facing release requirements. `docs/PROJECT_STATE.md` 
 - Current build number: `1`
 - Deployment target: iOS 17.0+
 - Device family: iPhone
-- App category in target: Utilities
+- App category: Utilities
 - StoreKit Lifetime product ID: `de.kamilunavo.keepmeter.pro.lifetime`
 - Monetization: one-time non-consumable Lifetime Pro; no subscription in v1
 - Free limit: 5 active purchases
 
 ## Public branding / release assets
 
-- Working/public v1 app name: `KeepMeter`
+- Public/working v1 name: `KeepMeter`
 - Name status: operationally locked for v1; not claimed as legally trademark-cleared
 - Final AppIcon: DONE
 - `KeepMeter/Assets.xcassets/AppIcon.appiconset`: DONE
@@ -28,24 +28,38 @@ This file tracks App Store-facing release requirements. `docs/PROJECT_STATE.md` 
 - Asset catalog connected to Xcode Resources: DONE
 - `ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon`: Debug + Release
 - CI hard-checks AppIcon presence, metadata, dimensions and opacity
-- Xcode Debug + Release asset compilation: GREEN in Gate 11 / workflow `32189137123`
+- Debug + Release asset compilation: GREEN
+
+## Privacy manifest baseline
+
+- `KeepMeter/PrivacyInfo.xcprivacy`: DONE
+- included in target Resources: DONE
+- `NSPrivacyTracking = false`
+- no tracking domains
+- no collected-data types declared for current local-only v1 core
+- UserDefaults Required Reason API category declared with `CA92.1`
+- Release CI verifies the manifest is physically present inside the built `KeepMeter.app`
+- built manifest must plist-match the source manifest
+
+Important: re-audit App Privacy and the manifest if analytics, crash reporting, networking/data collection or additional Required Reason APIs are added.
 
 ## App Store Connect blockers
 
 - [x] Lock operational v1 public app name / visual direction.
 - [x] Add final AppIcon asset catalog and connect it to the target.
+- [x] Add current v1 Privacy Manifest baseline and verify it in the built app bundle.
 - [ ] Create/verify the App Store Connect app record with public name / bundle ID.
 - [ ] Create the non-consumable Lifetime IAP with product ID `de.kamilunavo.keepmeter.pro.lifetime`.
 - [ ] Choose final App Store price for Lifetime Pro; local StoreKit price 9.99 is test metadata only.
 - [ ] Add IAP display name/description/localizations and review screenshot as required in App Store Connect.
-- [ ] Supply privacy policy URL.
-- [ ] Supply support URL.
-- [ ] Complete App Privacy answers from actual app behavior.
+- [ ] Supply final privacy policy URL.
+- [ ] Supply final support URL.
+- [ ] Complete App Privacy answers against the final binary.
 - [ ] Capture final iPhone App Store screenshots from a release candidate.
 - [ ] Perform signed Archive validation.
 - [ ] Upload first TestFlight build.
 - [ ] Exercise sandbox/TestFlight Lifetime purchase + entitlement + restore.
-- [ ] Complete runtime notification, persistence, light/dark and VoiceOver QA before submission.
+- [ ] Complete physical-device notification, persistence and VoiceOver QA before submission.
 
 ## Privacy / data behavior to preserve in listing
 
@@ -55,10 +69,10 @@ Current v1 product architecture is local-first:
 - no backend required for core purchase tracking
 - no bank connection
 - no inbox scraping
-- purchase/usage records are stored locally with SwiftData
+- purchase/usage records stored locally with SwiftData
 - local return reminders use iOS notifications
 
-App Store privacy declarations must be checked against the final binary and any later analytics/crash SDKs before submission. Do not infer final App Privacy answers from this draft if the implementation changes.
+App Store privacy declarations must be checked against the final binary and any later SDK additions before submission.
 
 ## German listing draft
 
@@ -80,7 +94,7 @@ Funktionen in Version 1:
 - Rückgabefristen für aktive Käufe im Blick behalten
 - Nutzungen mit einem Tippen erfassen
 - Kosten pro Nutzung automatisch berechnen
-- nachvollziehbare KEEP / REVIEW / RETURN?-Signale
+- nachvollziehbare BEHALTEN / PRÜFEN / ZURÜCK?-Signale
 - lokale Erinnerungen vor dem eingetragenen Rückgabedatum
 - abgeschlossene Käufe im Archiv
 - kompakte Auswertungen
@@ -128,45 +142,70 @@ purchase,return,deadline,shopping,cost,usage,decision,tracker,keep,returns
 
 ## Screenshot capture plan
 
-Brand/AppIcon is now locked. Final store screenshots should still wait until runtime Light/Dark and release-candidate QA are green.
+Automated CI now produces representative runtime screenshots, but these are QA evidence rather than final App Store marketing screenshots.
 
-Suggested sequence:
-
-1. Active dashboard with at least two realistic purchases and different urgency states.
-2. Purchase detail showing usage count, cost per use and explainable decision signal.
-3. Add Purchase screen emphasizing the simple workflow and return deadline.
+Final App Store screenshot sequence:
+1. populated Active dashboard with realistic purchases and different urgency states.
+2. Purchase Detail showing usage count, cost/use and explainable decision signal.
+3. Add Purchase emphasizing simple workflow and return deadline.
 4. Insights showing tracked value, decisions and usage metrics.
-5. Lifetime Pro screen showing one-time purchase / no subscription.
+5. Lifetime Pro showing one-time purchase / no subscription.
 
-Screenshots must use non-sensitive demo data and should be captured separately for DE and EN if both storefront localizations are published.
+Use non-sensitive demo data and capture storefront-specific DE/EN screenshots if both localizations are published.
 
-## Runtime gates before first submission
+## Automated simulator runtime evidence
 
-- [ ] Fresh install / onboarding.
-- [ ] Add purchase and verify it survives force-quit/relaunch on device.
-- [ ] Log usage and verify relationship survives relaunch.
-- [ ] Keep and return flows; archived items stay read-only.
-- [ ] Free limit blocks sixth active purchase.
+Gate 15 — PR #15 — workflow `32215165699` — merge `9c5b33bf0a0123afe243a0b32bd4d0139537cd82`:
+
+- [x] real KeepMeter Debug app installed into a booted iPhone Simulator.
+- [x] Light appearance + English onboarding launched.
+- [x] Dark appearance + German dashboard launched.
+- [x] app terminated and relaunched successfully.
+- [x] runtime screenshots generated and uploaded.
+- [x] screenshots visually inspected for obvious clipping/localization/contrast regression in those two states.
+- [x] Release Simulator build passed after runtime gate.
+- [x] built Release app contains matching `PrivacyInfo.xcprivacy`.
+
+Artifact: `keepmeter-runtime-screenshots`, workflow artifact ID `9352256830` (CI retention 7 days).
+
+This does **not** replace physical-device QA or a full all-screen visual review.
+
+## Runtime/device gates before first submission
+
+Automated/simulator:
+- [x] fresh Simulator install and onboarding render smoke.
+- [x] app launch / terminate / relaunch lifecycle smoke.
+- [x] representative Light appearance render.
+- [x] representative Dark appearance render.
+- [x] representative English localization render.
+- [x] representative German localization render.
+- [x] executable file-backed SwiftData reopen test.
+- [x] DecisionEngine/product-rule automated coverage.
+- [x] EN/DE key and format-placeholder parity.
+
+Still required before submission:
+- [ ] physical-device fresh install/onboarding pass.
+- [ ] add a real test purchase on device and verify force-quit/relaunch persistence.
+- [ ] log usage and verify relationship survives device relaunch.
+- [ ] keep + return flows and archived read-only behavior on device.
+- [ ] free limit blocks sixth active purchase in runtime interaction.
 - [ ] Lifetime purchase unlocks unlimited active purchases.
 - [ ] Restore re-establishes Lifetime entitlement.
-- [ ] Notification permission states behave correctly.
-- [ ] At least one real local notification is delivered on device.
-- [ ] Light appearance inspection.
-- [ ] Dark appearance inspection.
-- [ ] Accessibility Dynamic Type inspection.
+- [ ] notification permission states interact correctly.
+- [ ] at least one real local notification is delivered on device.
+- [ ] broader Light/Dark all-important-screen inspection.
+- [ ] Accessibility Dynamic Type spot-check on device.
 - [ ] VoiceOver navigation pass.
-- [ ] Signed Release archive succeeds.
+- [ ] signed Release Archive succeeds.
 
 ## Current automated release evidence
 
-Gate 11 — PR #11 — workflow `32189137123` — merge `cedc90a883713683217f663485a6d8f2e09fd63a`:
-
-- StoreKit configuration validation: GREEN
-- Release preflight including final AppIcon hard gate: GREEN
-- file-backed SwiftData reopen: GREEN
-- Debug iOS Simulator build including asset compilation: GREEN
-- Release iOS Simulator build including asset compilation: GREEN
+Gate 11 — final AppIcon hard gate: GREEN.
+Gate 12 — production StoreKit entitlement hardening: GREEN.
+Gate 13 — product-rule + EN/DE localization regression gates: GREEN.
+Gate 14 — Required Reason Privacy Manifest + built-bundle verification: GREEN.
+Gate 15 — booted iPhone Simulator runtime + screenshots + relaunch: GREEN.
 
 ## Release rule
 
-A green Debug/Release simulator CI build is necessary but not sufficient for TestFlight/App Store readiness. Do not mark the app release-ready until the App Store Connect IAP, signed archive and runtime device gates above are complete.
+The automated Simulator pipeline is now substantially stronger than a compile-only check, but it is still not a signed Archive, App Store sandbox session or physical-device validation. Do not mark KeepMeter release-ready until the App Store Connect Lifetime IAP, remaining device gates and first signed TestFlight archive/upload are complete.
