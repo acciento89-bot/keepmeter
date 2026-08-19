@@ -89,9 +89,15 @@ struct RootView: View {
     private static let runtimeHeadphonesID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
     private static let runtimeBackpackID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
     private static let runtimePersistenceSentinel = "keepmeter-runtime-persistence-ok.txt"
+    private static let runtimeLaunchSentinel = "keepmeter-runtime-launch-ok.txt"
+    private static let runtimeLaunchTokenPrefix = "--keepMeterRuntimeLaunchToken="
 
     private func runRuntimeSmokeHooksIfRequested() {
         let arguments = ProcessInfo.processInfo.arguments
+
+        if arguments.contains("--keepMeterRuntimeLaunchProbe") {
+            writeRuntimeLaunchSentinel(arguments: arguments)
+        }
 
         if arguments.contains("--keepMeterRuntimeSeed") {
             seedRuntimeSmokePurchases()
@@ -102,9 +108,29 @@ struct RootView: View {
         }
     }
 
+    private func writeRuntimeLaunchSentinel(arguments: [String]) {
+        guard
+            let tokenArgument = arguments.first(where: { $0.hasPrefix(Self.runtimeLaunchTokenPrefix) }),
+            !tokenArgument.dropFirst(Self.runtimeLaunchTokenPrefix.count).isEmpty
+        else {
+            assertionFailure("KeepMeter runtime launch probe is missing its token")
+            return
+        }
+
+        let token = String(tokenArgument.dropFirst(Self.runtimeLaunchTokenPrefix.count))
+
+        do {
+            let sentinelURL = try runtimeSentinelURL(named: Self.runtimeLaunchSentinel)
+            try token.write(to: sentinelURL, atomically: true, encoding: .utf8)
+            print("KeepMeter runtime smoke: launch probe reached SwiftUI root")
+        } catch {
+            assertionFailure("KeepMeter runtime launch probe failed: \(error)")
+        }
+    }
+
     private func seedRuntimeSmokePurchases() {
         do {
-            try removeRuntimePersistenceSentinelIfPresent()
+            try removeRuntimeSentinelIfPresent(named: Self.runtimePersistenceSentinel)
 
             let purchases = try modelContext.fetch(FetchDescriptor<Purchase>())
             let existingIDs = Set(purchases.map(\.id))
@@ -168,7 +194,7 @@ struct RootView: View {
                 return
             }
 
-            let sentinelURL = try runtimePersistenceSentinelURL()
+            let sentinelURL = try runtimeSentinelURL(named: Self.runtimePersistenceSentinel)
             try "ok\n".write(to: sentinelURL, atomically: true, encoding: .utf8)
             print("KeepMeter runtime smoke: persisted purchases verified after relaunch")
         } catch {
@@ -176,18 +202,18 @@ struct RootView: View {
         }
     }
 
-    private func removeRuntimePersistenceSentinelIfPresent() throws {
-        let url = try runtimePersistenceSentinelURL()
+    private func removeRuntimeSentinelIfPresent(named name: String) throws {
+        let url = try runtimeSentinelURL(named: name)
         if FileManager.default.fileExists(atPath: url.path) {
             try FileManager.default.removeItem(at: url)
         }
     }
 
-    private func runtimePersistenceSentinelURL() throws -> URL {
+    private func runtimeSentinelURL(named name: String) throws -> URL {
         guard let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
             throw CocoaError(.fileNoSuchFile)
         }
-        return documents.appendingPathComponent(Self.runtimePersistenceSentinel)
+        return documents.appendingPathComponent(name)
     }
     #endif
 }
