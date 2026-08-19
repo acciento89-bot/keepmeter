@@ -154,3 +154,30 @@ jobs:
           print("✓ PrivacyInfo.xcprivacy is bundled in the Release app product")
           print("✓ Bundled privacy manifest matches the source manifest")
           PY
+
+  storekit-experimental:
+    name: StoreKit entitlement smoke (experimental)
+    runs-on: macos-26
+    continue-on-error: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Compile StoreKitTest entitlement smoke
+        run: |
+          set -euo pipefail
+          xcrun --sdk macosx swiftc \
+            -parse-as-library \
+            KeepMeter/Services/EntitlementStore.swift \
+            ci/StoreKitEntitlementSmoke.swift \
+            -framework Combine \
+            -framework StoreKit \
+            -framework StoreKitTest \
+            -o /tmp/keepmeter-storekit-entitlement-smoke
+
+      - name: Exercise Free to Lifetime Pro entitlement recovery
+        run: /tmp/keepmeter-storekit-entitlement-smoke
