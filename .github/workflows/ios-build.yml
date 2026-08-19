@@ -37,6 +37,9 @@ jobs:
       - name: Validate App Store release settings
         run: bash ci/release-preflight.sh
 
+      - name: Validate guarded TestFlight workflow
+        run: python3 ci/testflight-workflow-preflight.py
+
       - name: Validate EN/DE localization integrity
         run: python3 ci/localization-preflight.py
 
