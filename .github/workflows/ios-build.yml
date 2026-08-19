@@ -31,6 +31,9 @@ jobs:
       - name: Validate App Store IAP metadata limits
         run: python3 ci/storekit-metadata-preflight.py
 
+      - name: Validate App Store listing metadata limits
+        run: python3 ci/app-store-listing-preflight.py
+
       - name: Validate App Store release settings
         run: bash ci/release-preflight.sh
 
