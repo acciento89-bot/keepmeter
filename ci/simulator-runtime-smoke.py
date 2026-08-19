@@ -18,6 +18,7 @@ PERSISTENCE_SENTINEL = "keepmeter-runtime-persistence-ok.txt"
 LAUNCH_SENTINEL = "keepmeter-runtime-launch-ok.txt"
 LAUNCH_PROBE_ARGUMENT = "--keepMeterRuntimeLaunchProbe"
 LAUNCH_TOKEN_PREFIX = "--keepMeterRuntimeLaunchToken="
+MAX_SIMULATOR_SETUP_ATTEMPTS = 2
 
 
 class RuntimeSmokeError(RuntimeError):
@@ -74,7 +75,7 @@ def available_devices() -> dict:
     return json.loads(completed.stdout)
 
 
-def select_simulator() -> tuple[str, str, tuple[int, int]]:
+def simulator_candidates() -> list[tuple[str, str, tuple[int, int]]]:
     candidates: list[tuple[tuple[int, int], int, str, str]] = []
     for runtime, devices in available_devices().get("devices", {}).items():
         match = re.search(r"iOS-(\d+)-(\d+)", runtime)
@@ -90,12 +91,8 @@ def select_simulator() -> tuple[str, str, tuple[int, int]]:
             pro_score = 2 if "Pro" in name else 1 if ("Plus" in name or "Max" in name) else 0
             candidates.append((version, pro_score, name, device["udid"]))
 
-    if not candidates:
-        raise RuntimeSmokeError("No available iPhone simulator found on the runner")
-
-    candidates.sort()
-    version, _, name, udid = candidates[-1]
-    return udid, name, version
+    candidates.sort(reverse=True)
+    return [(udid, name, version) for version, _, name, udid in candidates]
 
 
 def device_state(udid: str) -> str:
@@ -104,6 +101,21 @@ def device_state(udid: str) -> str:
             if device.get("udid") == udid:
                 return device.get("state", "Unknown")
     return "Missing"
+
+
+def installation_services_responsive(udid: str) -> bool:
+    try:
+        result = simctl(["listapps", udid], timeout=12, check=False, quiet=True)
+    except RuntimeSmokeError as exc:
+        print(f"Simulator app-service health probe timed out: {exc}", flush=True)
+        return False
+
+    if result.returncode != 0:
+        print("Simulator app-service health probe returned a failure", flush=True)
+        return False
+
+    print("✓ Simulator app installation services respond", flush=True)
+    return True
 
 
 def wait_for_boot(udid: str) -> None:
@@ -135,8 +147,12 @@ def wait_for_boot(udid: str) -> None:
         simctl(["bootstatus", udid, "-b"], timeout=90)
         print("✓ Simulator boot services report ready", flush=True)
     except RuntimeSmokeError as exc:
-        print(f"bootstatus did not complete; using a final bounded settle fallback: {exc}", flush=True)
-        time.sleep(15)
+        print(f"bootstatus did not complete; checking app installation services directly: {exc}", flush=True)
+        if not installation_services_responsive(udid):
+            raise RuntimeSmokeError(
+                "Simulator reached Booted state but CoreSimulator app installation services never became responsive"
+            ) from exc
+        time.sleep(3)
 
 
 def app_container(udid: str, kind: str = "app") -> Path | None:
@@ -179,6 +195,40 @@ def ensure_installed(udid: str, app_path: Path) -> Path:
 
     raise RuntimeSmokeError(
         "KeepMeter never became installed after the bounded simctl install + container polling window"
+    )
+
+
+def prepare_runtime_simulator(app_path: Path) -> tuple[str, str, tuple[int, int], Path]:
+    candidates = simulator_candidates()
+    if not candidates:
+        raise RuntimeSmokeError("No available iPhone simulator found on the runner")
+
+    attempt_count = min(MAX_SIMULATOR_SETUP_ATTEMPTS, len(candidates))
+    failures: list[str] = []
+
+    for index, (udid, name, version) in enumerate(candidates[:attempt_count], start=1):
+        print(
+            f"Runtime environment attempt {index}/{attempt_count}: "
+            f"{name}, iOS {version[0]}.{version[1]}, {udid}",
+            flush=True,
+        )
+        try:
+            wait_for_boot(udid)
+            installed_app = ensure_installed(udid, app_path)
+            print(f"✓ App installed at {installed_app}", flush=True)
+            return udid, name, version, installed_app
+        except RuntimeSmokeError as exc:
+            failures.append(f"{name} iOS {version[0]}.{version[1]}: {exc}")
+            print(f"Runtime environment attempt {index} failed before app execution: {exc}", flush=True)
+            best_effort_simctl(["terminate", udid, BUNDLE_ID], timeout=5)
+            best_effort_simctl(["shutdown", udid], timeout=8)
+
+            if index < attempt_count:
+                print("Retrying setup once on a different available iPhone simulator…", flush=True)
+
+    detail = " | ".join(failures)
+    raise RuntimeSmokeError(
+        f"No healthy simulator environment could install KeepMeter after {attempt_count} bounded attempts: {detail}"
     )
 
 
@@ -347,14 +397,10 @@ def main() -> int:
         timeout=90,
     )
 
-    udid, name, version = select_simulator()
-    print(f"Using simulator: {name}, iOS {version[0]}.{version[1]}, {udid}", flush=True)
+    udid, name, version, _ = prepare_runtime_simulator(app_path)
+    print(f"Using healthy simulator: {name}, iOS {version[0]}.{version[1]}, {udid}", flush=True)
 
     try:
-        wait_for_boot(udid)
-        installed_app = ensure_installed(udid, app_path)
-        print(f"✓ App installed at {installed_app}", flush=True)
-
         best_effort_simctl(
             [
                 "status_bar", udid, "override",
