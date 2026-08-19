@@ -106,6 +106,9 @@ jobs:
           strings "$release_binary" > /tmp/keepmeter-release-strings.txt
 
           forbidden=(
+            "keepMeterRuntimeLaunchProbe"
+            "keepMeterRuntimeLaunchToken"
+            "keepmeter-runtime-launch-ok.txt"
             "keepMeterRuntimeSeed"
             "keepMeterRuntimeProbe"
             "keepmeter-runtime-persistence-ok.txt"
@@ -120,7 +123,7 @@ jobs:
             fi
           done
 
-          echo "✓ DEBUG-only runtime seed/probe hooks are absent from Release binary"
+          echo "✓ DEBUG-only runtime launch/seed/probe hooks are absent from Release binary"
 
       - name: Validate privacy manifest in built app bundle
         run: |
