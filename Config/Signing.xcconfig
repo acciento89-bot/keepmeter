@@ -1,0 +1,3 @@
+// KeepMeter signing identity used by release/archive tooling.
+DEVELOPMENT_TEAM = TKG684N5GL
+CODE_SIGN_STYLE = Automatic
