@@ -40,6 +40,9 @@ jobs:
       - name: Validate guarded TestFlight workflow
         run: python3 ci/testflight-workflow-preflight.py
 
+      - name: Validate App Store Connect handoff
+        run: python3 ci/app-store-connect-handoff-preflight.py
+
       - name: Validate EN/DE localization integrity
         run: python3 ci/localization-preflight.py
 
