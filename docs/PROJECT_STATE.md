@@ -1,10 +1,10 @@
 # KeepMeter — Project State
 
 Last updated: 2026-08-19
-Status: ACTIVE — APP STORE HANDOFF + ARM64 RUNTIME GREEN / SIGNING + APPLE DEVICE GATES OPEN
+Status: ACTIVE — APP STORE HANDOFF + ARM64 RUNTIME + SIGNING PREFLIGHT GREEN / APPLE DEVICE + ASC GATES OPEN
 Repository: `acciento89-bot/keepmeter`
 Default branch: `main`
-Current verified product checkpoint: `85160a6e66774bdbd1128fa066abc5bd66371d52`
+Current verified product checkpoint: `4d63db7d32ec24ffd4beb59e506369e2c25ba2c1`
 
 ## Handoff rule
 
@@ -49,7 +49,7 @@ Core loop: **Bought -> Use -> Measure -> Decide before deadline.**
 - Utilities category; generated Info.plist.
 - Shared scheme archives Release and has `buildForArchiving = YES`.
 - Target uses Automatic Signing.
-- Gate #20 is currently validating Apple team `TKG684N5GL` as a separate signing-readiness pass.
+- Gate #20 locks Apple team `TKG684N5GL` in versioned signing configuration and CI preflight.
 
 ## DecisionEngine + AccessPolicy
 
@@ -83,6 +83,7 @@ Automated evidence:
 - `ci/PersistenceSmoke.swift` writes a real file-backed store, destroys the first container, reopens it and verifies IDs, fields, dates, outcome, usage relationship and cost/use.
 - Gate #17 seeds deterministic purchases into the real running iOS Simulator app, terminates/relaunches without reseeding and verifies the same SwiftData IDs, prices, usage counts, outcomes and DecisionEngine results through an in-app DEBUG probe.
 - Gate #18 reran the same populated persistence/visual path on the final App Store metadata state and passed.
+- Gate #20 reran the complete running-app persistence/visual path after signing/runtime hardening and passed unchanged.
 
 Still open:
 - equivalent force-quit/relaunch check on a physical iPhone.
@@ -160,9 +161,9 @@ Still open:
 - `ci/localization-preflight.py` enforces EN/DE key parity, no duplicates/empties and matching format placeholders.
 - native `ci/RuntimeScreenshotSignal.swift` rejects black/near-uniform screenshots.
 
-Latest Gate #18 runtime artifact:
-- workflow `32258911074`.
-- artifact `9367666345`.
+Latest Gate #20 runtime artifact:
+- workflow `32276400054`.
+- artifact `9374353233`.
 - fresh EN/Light onboarding manually inspected clean.
 - populated EN/Light dashboard manually inspected clean.
 - persisted DE/Dark dashboard manually inspected clean.
@@ -193,6 +194,13 @@ Gate #19 adds infrastructure hardening without weakening app assertions:
 - `bootstatus` and `simctl install` client timeouts are non-authoritative; actual app-container materialization after the full bounded install/poll window is the setup authority.
 - once KeepMeter installs, there is no alternate-device retry for launch, persistence, screenshots or Release validation.
 
+Gate #20 extends hosted CoreSimulator hardening without weakening the app evidence:
+- a timed-out `simctl io screenshot` client is non-authoritative only if the same simulator still materializes a stable PNG that passes `sips` and the native visual-signal validator.
+- screenshot capture may retry once on the same installed simulator.
+- if the already-installed simulator cannot produce the unique active-scene sentinel because its UI services are unhealthy, the harness may perform exactly one shutdown/reboot of the same UDID.
+- the existing KeepMeter installation must still resolve after reboot and the normal active-scene proof must then pass.
+- no alternate simulator is allowed after successful installation.
+
 ## Website / public release pages
 
 Kamilunavo website source merge `afd809da2f814625b1cf45f6920c958897fb5398` added:
@@ -217,11 +225,12 @@ Known-good release model from ZweiCheck:
 
 Do not assume ZweiCheck repository secrets automatically exist in KeepMeter.
 
-Gate #20 (`agent/signing-preflight`) currently adds:
-- `DEVELOPMENT_TEAM = TKG684N5GL` to KeepMeter Debug + Release.
+Gate #20 merged and verifies:
+- versioned `Config/Signing.xcconfig` with `DEVELOPMENT_TEAM = TKG684N5GL` and Automatic Signing.
 - hard CI assertions for `CODE_SIGN_STYLE = Automatic` and exact team ID.
-- hard shared-scheme archive assertions.
-- `docs/SIGNING_ARCHIVE_HANDOFF.md`.
+- hard shared-scheme Release archive assertions.
+- `docs/SIGNING_ARCHIVE_HANDOFF.md` with the future signed archive/export pattern and explicit credential boundary.
+- complete metadata + runtime + screenshot + Release QA remained green on workflow `32276400054` before merge.
 
 Gate #20 intentionally does not add credentials, certificates, provisioning profiles, a signed archive or a TestFlight upload.
 
@@ -232,6 +241,7 @@ Gate #20 intentionally does not add credentials, certificates, provisioning prof
 17. PR #17 — populated Simulator persistence + active-scene launch proof + screenshot visual-signal + Release QA isolation — workflow `32249500834` — merge `43e353fefd9b41f0d777ee2fcd475e7c62eef3b6` — GREEN; screenshots manually inspected.
 18. PR #19 — arm64 `macos-26` runtime infrastructure + bounded two-device pre-install fallback — workflow `32257672022` — merge `1e819921a977614c6364f31f4abab0170ed9ef1b` — GREEN; artifact `9367177687` manually inspected.
 19. PR #18 — App Store/IAP/listing/privacy handoff on Gate #19 arm64 base — workflow `32258911074` — merge `85160a6e66774bdbd1128fa066abc5bd66371d52` — GREEN; artifact `9367666345` manually inspected.
+20. PR #20 — Apple team/signing/archive preflight + same-device CoreSimulator lifecycle hardening — workflow `32276400054` — merge `4d63db7d32ec24ffd4beb59e506369e2c25ba2c1` — GREEN; artifact `9374353233` manually inspected.
 
 Major product/source/design passes must remain CI-green before merge/TestFlight.
 
@@ -244,13 +254,13 @@ DONE / automated:
 - file-backed and running-app SwiftData persistence evidence.
 - representative Light/EN and Dark/DE visuals with anti-black-screen gate.
 - DEBUG QA isolation from Release binary.
-- required iOS CI proven on `macos-26` arm64 with bounded pre-install fallback.
+- required iOS CI proven on `macos-26` arm64 with bounded pre-install fallback and same-device recovery.
 - exact Lifetime Pro v1 IAP handoff.
 - exact DE/EN App Store listing source and field-limit checks.
 - App Privacy handoff.
+- Apple team `TKG684N5GL`, Automatic Signing and Release archive scheme locked by CI.
 
 OPEN:
-- Gate #20 signing/team/archive preflight merge.
 - live verification/deployment of public support/privacy URLs.
 - App Store Connect app record + Lifetime IAP creation/configuration.
 - interactive StoreKit purchase/restore automation or session.
@@ -263,9 +273,9 @@ No TestFlight build has been uploaded yet.
 
 ## Immediate next steps
 
-1. Make Gate #20 fully green against the Gate #18 main state and merge only after the complete metadata + runtime + Release pipeline passes.
-2. Prepare a proper StoreKitTest/XCTest purchase-entitlement test rather than DEBUG fake entitlement; keep it experimental/non-blocking until Xcode 26.6 behavior is proven stable.
-3. Verify/deploy public KeepMeter privacy/support pages when authenticated server deployment access is available.
-4. Create/configure the App Store Connect app record and Lifetime IAP when authenticated Apple-side access is available.
-5. Perform physical-device notification/persistence/accessibility gates.
-6. Only after those gates create the first signed TestFlight build; do not burn intermediate TestFlight build numbers.
+1. Gate #21: prepare a proper StoreKitTest/XCTest Free -> Lifetime Pro entitlement test rather than DEBUG fake entitlement; keep it isolated/non-blocking until Xcode 26.6 behavior is proven stable.
+2. Verify/deploy public KeepMeter privacy/support pages when authenticated server deployment access is available.
+3. Create/configure the App Store Connect app record and Lifetime IAP when authenticated Apple-side access is available.
+4. Perform physical-device notification/persistence/accessibility gates.
+5. Create the first signed Release Archive only after the Apple-side prerequisites are ready.
+6. Upload the first TestFlight build only when the remaining device/IAP gates justify consuming the first build number.
