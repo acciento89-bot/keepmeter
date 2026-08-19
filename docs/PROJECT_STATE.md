@@ -1,11 +1,12 @@
 # KeepMeter — Project State
 
 Last updated: 2026-08-19
-Status: ACTIVE — FIRST TESTFLIGHT UPLOAD ACCEPTED BY APP STORE CONNECT / APPLE PROCESSING + TESTFLIGHT DEVICE VALIDATION + IAP REVIEW SCREENSHOT + FINAL ASC METADATA GATES OPEN
+Status: ACTIVE — TESTFLIGHT BUILD INSTALLABLE + REAL LIFETIME PURCHASE VERIFIED / IAP REVIEW SCREENSHOT CAPTURED / RESTORE + SCREENSHOT UPLOAD + FINAL ASC METADATA + PHYSICAL QA GATES OPEN
 Repository: `acciento89-bot/keepmeter`
 Default branch: `main`
 Current verified product checkpoint: `968987a52bc675b27451785618a6132fe3eee538`
 Current verified release checkpoint: TestFlight workflow run `32294826597` / upload job `96203597997` — SUCCESS
+Current physical/TestFlight checkpoint: Gate #25 — user-confirmed on 2026-08-19: build processed/installable, Lifetime Pro purchase works, review screenshot captured locally.
 
 ## Handoff rule
 
@@ -18,6 +19,7 @@ For future work:
 4. Update this file after every major product/release pass.
 5. Never treat workflow-level green as proof if a relevant job is allowed to fail; StoreKit counts only when its required job is actually green.
 6. Never claim App Store Connect/TestFlight state beyond the evidence explicitly recorded here.
+7. User-confirmed physical/App Store Connect actions must be labeled as user-confirmed unless independently verified through an API/log/source.
 
 ## Product thesis
 
@@ -89,10 +91,10 @@ Implemented:
 Automated evidence:
 - `ci/PersistenceSmoke.swift` writes a real file-backed store, destroys the first container, reopens it and verifies IDs, fields, dates, outcome, usage relationship and cost/use.
 - Gate #17 added deterministic running-app SwiftData seed/relaunch verification.
-- Gates #18/#20/#21/#22/#23 reran the persistence/runtime path successfully after later release hardening.
+- Gates #18/#20/#21/#22/#23/#24-doc-CI reran the persistence/runtime path successfully after later release hardening.
 
 Still open:
-- equivalent force-quit/relaunch check on a physical iPhone/TestFlight build.
+- equivalent force-quit/relaunch persistence spot-check on the physical TestFlight build.
 
 ## StoreKit / Lifetime Pro
 
@@ -114,7 +116,6 @@ Implemented/hardened:
 - local `.storekit` NonConsumable test product.
 - shared Debug scheme references local StoreKit config.
 - required `ci/storekit-metadata-preflight.py` checks exact product identity/copy and field limits.
-- DEBUG Settings diagnostics for product/price/entitlement.
 - `Transaction.currentEntitlements`, verified `Transaction.updates` and `Transaction.unfinished` handled.
 - access refresh occurs before `transaction.finish()`.
 - unverified transactions never unlock Pro.
@@ -129,10 +130,15 @@ Apple-side state confirmed by user on 2026-08-19:
 - DE/EN IAP localizations entered.
 - IAP Review Notes entered.
 - Repository ASC secrets provisioned: `ASC_ISSUER_ID`, `ASC_KEY_ID`, `ASC_PRIVATE_KEY_B64`.
+- TestFlight build `0.1.0 (1)` completed Apple processing and became visible/installable.
+- real Apple/TestFlight Lifetime Pro offer loads on the physical iPhone.
+- real Lifetime Pro purchase completes successfully (`kauf klappt`, user-confirmed).
+- real Pro/paywall screenshot was captured locally for IAP review.
 
-Still open:
-- Apple IAP review screenshot from the real TestFlight/release-candidate paywall.
-- real sandbox/TestFlight Lifetime purchase + entitlement persistence + explicit Restore Purchases validation.
+Still open / not overclaimed:
+- upload the captured paywall screenshot into the Lifetime IAP App Review Screenshot field unless already done and explicitly confirmed.
+- explicit Restore Purchases (`AppStore.sync()`) validation on a clean/reinstalled appropriate test state.
+- explicit post-purchase force-quit/relaunch entitlement-persistence confirmation on the physical TestFlight build.
 
 ## App Store listing / privacy / App Store Connect handoff
 
@@ -152,10 +158,10 @@ Required CI cross-checks:
 - Privacy baseline: Data Not Collected / Tracking No, subject to mandatory final-binary re-audit.
 
 Apple/account items still requiring explicit verification before App Store submission:
-- current agreements/account state if not already satisfied by the successful upload.
 - EU DSA trader-status/account/app setting; repository state must not be treated as a legal determination.
 - final App Store listing metadata entry/review in ASC.
 - final App Privacy answers in ASC.
+- IAP review screenshot upload if not already completed.
 
 ## Privacy
 
@@ -170,71 +176,25 @@ Current v1 baseline:
 
 Re-audit if analytics, crash SDKs, networking/data collection, push-token handling or other off-device behavior is added.
 
-## Notifications
+## Notifications / accessibility / visual
 
 Implemented:
 - local reminders around entered return date.
 - stable DE/EN dynamic format localization.
 - Settings exposes authorization state, request action and iOS Settings handoff.
-- authorization state refreshes when app becomes active.
-
-Still open:
-- real scheduled-notification delivery on physical device/TestFlight build.
-
-## Localization / accessibility / visual
-
-- polished native UI across Onboarding, Dashboard, Add, Detail, Insights, Archive, Settings and Paywall.
 - Dynamic Type adaptive layouts on major screens.
 - VoiceOver grouping/hiding applied where appropriate in source.
 - `ci/localization-preflight.py` enforces EN/DE key parity, no duplicates/empties and matching format placeholders.
 - native `ci/RuntimeScreenshotSignal.swift` rejects black/near-uniform screenshots.
 
-Latest required-CI runtime evidence before Gate #24:
-- Gate #23 workflow `32290236121`.
-- artifact `9379371189` (`keepmeter-runtime-screenshots`).
-- screenshot generation and native visual-signal validation passed.
-- latest manually inspected representative runtime artifact remains Gate #20 `9374353233`, clean for fresh EN/Light onboarding, populated EN/Light dashboard and persisted DE/Dark dashboard.
+Physical/TestFlight evidence:
+- Gate #25 confirms the real TestFlight Pro/paywall was reached and a review screenshot was captured locally.
 
 Still open:
-- real TestFlight paywall screenshot for IAP review.
-- broader physical-device Light/Dark review.
-- physical/runtime VoiceOver pass.
+- real scheduled-notification delivery on physical device/TestFlight build.
+- broader physical Light/Dark review.
+- physical VoiceOver pass.
 - physical Dynamic Type spot-check.
-
-## Runtime CI hardening
-
-Required runner: **`macos-26` Apple Silicon / arm64**.
-
-Gate #17:
-- DEBUG-only deterministic purchase seeding and persistence sentinel.
-- unique per-launch active-scene token.
-- bounded foreground nudge.
-- visual-signal validation for screenshots.
-- Release binary scan rejects DEBUG-only runtime markers/data.
-
-Gate #19:
-- moved required CI to `macos-26` arm64.
-- at most two iPhone simulator setup attempts before installation.
-- no alternate-device retry after KeepMeter installs.
-
-Gate #20:
-- hardened screenshot and same-device CoreSimulator recovery without weakening active-scene/persistence assertions.
-
-Gate #21:
-- separate required StoreKit entitlement XCTest lane pinned to Xcode 26.2 / iOS 26.2.
-
-Gate #22:
-- guarded manual `.github/workflows/testflight.yml`.
-- `workflow_dispatch` only; no automatic triggers.
-- main branch only.
-- exact confirmation `UPLOAD_KEEP_METER_0_1_0_BUILD_1`.
-- exact bundle/version/build checks.
-- App Store Connect export uses `destination=upload`, Automatic Signing, team `TKG684N5GL`, and `manageAppVersionAndBuildNumber=false`.
-
-Gate #23:
-- exact machine-readable ASC setup and operational runbook.
-- required `ci/app-store-connect-handoff-preflight.py`.
-- DSA and live-URL status deliberately remain explicit external verification items rather than guessed conclusions.
 
 ## Website / public release pages
 
@@ -252,29 +212,31 @@ User confirmed the Kamilunavo production deploy was executed on 2026-08-19. Inde
 
 Known team: `TKG684N5GL`.
 
-Gate #24 first real TestFlight upload — VERIFIED:
+Gate #24 first real TestFlight upload — connector/log VERIFIED:
 - Workflow: `KeepMeter TestFlight`.
 - Run: `32294826597`.
 - Job: `96203597997` (`upload`).
-- Checkout/main guard: success.
-- Exact confirmation `UPLOAD_KEEP_METER_0_1_0_BUILD_1`: success.
+- exact confirmation and `main` guard passed.
 - Xcode 26.2 selected.
-- StoreKit/listing/localization/release preflights: success.
-- All three KeepMeter ASC secrets present and the private key decoded successfully.
-- Signed Release archive: `** ARCHIVE SUCCEEDED **`.
-- Archive code-sign verification: valid on disk / satisfies Designated Requirement.
-- Verified identity: `de.kamilunavo.keepmeter 0.1.0 (1)`.
-- Verified TeamIdentifier: `TKG684N5GL`.
-- Export options: `app-store-connect`, `destination=upload`, Automatic Signing, `manageAppVersionAndBuildNumber=false`.
+- StoreKit/listing/localization/release preflights passed.
+- all three KeepMeter ASC secrets present; private key decoded successfully.
+- signed Release archive: `** ARCHIVE SUCCEEDED **`.
+- code-sign verification passed.
+- verified identity: `de.kamilunavo.keepmeter 0.1.0 (1)`.
+- verified TeamIdentifier: `TKG684N5GL`.
 - App Store Connect upload analysis completed without rejection.
-- Apple upload log reached 100% and reported: `Uploaded package is processing.`
-- Apple upload log then reported: `Upload succeeded.` and `Uploaded KeepMeter`.
-- Export finished with `** EXPORT SUCCEEDED **`.
-- Temporary API private key cleanup step succeeded.
+- Apple log: `Uploaded package is processing.`
+- Apple log: `Upload succeeded.` / `Uploaded KeepMeter`.
+- export: `** EXPORT SUCCEEDED **`.
+- temporary API private key cleanup succeeded.
 
-Boundary after Gate #24:
-- The package is accepted by App Store Connect and processing has begun.
-- This is proof of successful upload, not yet proof that Apple processing is complete, the build is visible/installable in TestFlight, or the IAP works against Apple sandbox/TestFlight.
+Gate #25 physical/TestFlight validation — USER-CONFIRMED:
+- Apple processing completed sufficiently for TestFlight distribution.
+- build `0.1.0 (1)` is visible/installable on a physical iPhone.
+- real Lifetime Pro offer loads from Apple/TestFlight.
+- real Lifetime purchase succeeds.
+- IAP review screenshot was captured locally from the real TestFlight/release-candidate paywall.
+- this gate does not by itself prove explicit Restore Purchases or post-purchase relaunch recovery; those remain separate checks until explicitly confirmed.
 
 ## Verified gates
 
@@ -287,13 +249,14 @@ Boundary after Gate #24:
 21. PR #24 + #25 — real iOS Simulator StoreKitTest Lifetime entitlement proof promoted to required CI — final required workflow `32284909516` — merge `222464d21c888fdae5d01b07b6569a76ca2749a7` — GREEN.
 22. PR #27 — guarded manual signed Archive/TestFlight lane + required workflow-safety preflight — workflow `32287632445` — merge `8828fc2f706d2dec44ea48536d4928026aaa9d75` — GREEN.
 23. PR #29 — exact ASC machine-readable setup + immutable SKU + Apple-side runbook + required handoff preflight — workflow `32290236121` — merge `968987a52bc675b27451785618a6132fe3eee538` — GREEN.
-24. Manual TestFlight workflow run `32294826597`, job `96203597997` — signed exact KeepMeter `0.1.0 (1)`, Apple accepted upload, package entered processing, `Upload succeeded`, `EXPORT SUCCEEDED` — GREEN. Processing/TestFlight installability remains the next Apple-side boundary.
+24. Manual TestFlight workflow run `32294826597`, job `96203597997` — signed exact KeepMeter `0.1.0 (1)`, Apple accepted upload, `Upload succeeded`, `EXPORT SUCCEEDED` — GREEN. Gate #24 docs PR #31 subsequently reran required StoreKit + full normal runtime/Release/Privacy CI successfully and merged to `main` as `7e9f02a5a09fc9d59a4b2d266346810b69d62ba6`.
+25. Physical/TestFlight validation — user-confirmed 2026-08-19: processed/installable TestFlight build, real Lifetime Pro offer, successful real purchase, real paywall screenshot captured locally. Restore/relaunch recovery are not included in this gate unless separately confirmed.
 
 Major product/source/design passes must remain CI-green before merge/TestFlight.
 
 ## Release status
 
-DONE / verified:
+DONE / verified or explicitly user-confirmed:
 - functional Debug + Release builds.
 - AppIcon and Privacy Manifest.
 - DecisionEngine / AccessPolicy / EN-DE regression tests.
@@ -304,27 +267,29 @@ DONE / verified:
 - exact Lifetime Pro identity/copy/price handoff.
 - App Store Connect app record created (user-confirmed).
 - Lifetime Pro IAP core setup, price, availability, DE/EN localizations and Review Notes entered (user-confirmed).
-- KeepMeter ASC repository secrets provisioned (user-confirmed; validated by successful Gate #24 workflow).
-- signed Release Archive for exact `0.1.0 (1)` successfully created and verified.
-- first real App Store Connect/TestFlight upload accepted by Apple; package entered processing.
+- KeepMeter ASC repository secrets provisioned and validated by successful Gate #24 workflow.
+- signed Release Archive for exact `0.1.0 (1)` created and verified.
+- first real App Store Connect/TestFlight upload accepted by Apple.
+- Apple processing completed sufficiently for build installation (user-confirmed).
+- real physical TestFlight Lifetime purchase works (user-confirmed).
+- real IAP/paywall review screenshot captured locally (user-confirmed).
 
 OPEN / external or device-only:
+- upload/confirm the captured IAP App Review Screenshot in App Store Connect.
+- explicit Restore Purchases validation.
+- explicit physical post-purchase relaunch entitlement persistence.
+- physical-device persistence/notification/VoiceOver/Dynamic Type/Light-Dark checks not already covered above.
 - independent live verification of KeepMeter privacy/support URLs.
-- Apple processing completion and TestFlight build visibility/installability.
-- IAP App Review screenshot from the real TestFlight/release-candidate paywall.
-- real sandbox/TestFlight Lifetime purchase + entitlement persistence + explicit Restore Purchases.
-- physical-device persistence/notification/VoiceOver/Dynamic Type checks.
 - final App Store listing and App Privacy entry/review in ASC.
 - EU DSA trader-status/account/app verification.
 - final App Store submission readiness.
 
 ## Immediate next steps
 
-1. Confirm App Store Connect finishes processing KeepMeter `0.1.0 (1)` and the build becomes visible/installable in TestFlight.
-2. Install the TestFlight build on a physical iPhone and open the real Pro paywall; verify the €9.99 Lifetime product loads from Apple.
-3. Capture the real Pro paywall screenshot and upload it as the Lifetime IAP App Review Screenshot.
-4. Perform real sandbox/TestFlight Lifetime purchase validation: Free -> purchase -> Pro, relaunch persistence, then explicit Restore Purchases path on an appropriate clean/reinstalled test state.
-5. Perform physical-device persistence, notification, VoiceOver, Dynamic Type and Light/Dark spot checks.
-6. Independently verify `https://kamilunavo.com/keepmeter/privacy` and `https://kamilunavo.com/support` publicly.
-7. Finish/review App Store listing, App Privacy and EU DSA/account settings in App Store Connect.
-8. Only after the above gates are green, prepare the final App Store submission.
+1. Upload the captured real TestFlight paywall screenshot to the Lifetime IAP **App Review Screenshot** field and save it.
+2. Validate explicit **Restore Purchases** on an appropriate clean/reinstalled test state; confirm Pro returns through the user-triggered restore path.
+3. Force-quit/relaunch the physical TestFlight build after purchase and confirm Lifetime Pro entitlement persists/reloads correctly.
+4. Perform remaining physical-device checks: scheduled reminder delivery, VoiceOver, Dynamic Type, and representative Light/Dark screens.
+5. Independently verify `https://kamilunavo.com/keepmeter/privacy` and `https://kamilunavo.com/support` publicly.
+6. Finish/review App Store listing, App Privacy and EU DSA/account settings in App Store Connect.
+7. Only after the above gates are green, prepare the final App Store submission.
