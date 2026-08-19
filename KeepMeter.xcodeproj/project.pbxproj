@@ -25,7 +25,19 @@
 		A10000000000000000000010 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000012 /* SettingsView.swift */; };
 		A10000000000000000000011 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000013 /* Assets.xcassets */; };
 		A10000000000000000000012 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000014 /* PrivacyInfo.xcprivacy */; };
+		A20000000000000000000001 /* KeepMeterStoreKitTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000001 /* KeepMeterStoreKitTests.swift */; };
+		A20000000000000000000002 /* KeepMeter.storekit in Resources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000002 /* KeepMeter.storekit */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		H20000000000000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E10000000000000000000002 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E10000000000000000000001;
+			remoteInfo = KeepMeter;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		B10000000000000000000001 /* KeepMeterApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeepMeterApp.swift; sourceTree = "<group>"; };
@@ -48,10 +60,20 @@
 		B10000000000000000000012 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		B10000000000000000000013 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B10000000000000000000014 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		B20000000000000000000001 /* KeepMeterStoreKitTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeepMeterStoreKitTests.swift; sourceTree = "<group>"; };
+		B20000000000000000000002 /* KeepMeter.storekit */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ../KeepMeter/StoreKit/KeepMeter.storekit; sourceTree = "<group>"; };
+		B20000000000000000000003 /* KeepMeterStoreKitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = KeepMeterStoreKitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		C10000000000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C20000000000000000000001 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -65,6 +87,7 @@
 			isa = PBXGroup;
 			children = (
 				D10000000000000000000002 /* KeepMeter */,
+				D20000000000000000000001 /* KeepMeterStoreKitTests */,
 				D10000000000000000000006 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -118,10 +141,20 @@
 			path = Views;
 			sourceTree = "<group>";
 		};
+		D20000000000000000000001 /* KeepMeterStoreKitTests */ = {
+			isa = PBXGroup;
+			children = (
+				B20000000000000000000001 /* KeepMeterStoreKitTests.swift */,
+				B20000000000000000000002 /* KeepMeter.storekit */,
+			);
+			path = KeepMeterStoreKitTests;
+			sourceTree = "<group>";
+		};
 		D10000000000000000000006 /* Products */ = {
 			isa = PBXGroup;
 			children = (
 				B1000000000000000000000B /* KeepMeter.app */,
+				B20000000000000000000003 /* KeepMeterStoreKitTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -146,6 +179,24 @@
 			productReference = B1000000000000000000000B /* KeepMeter.app */;
 			productType = "com.apple.product-type.application";
 		};
+		E20000000000000000000001 /* KeepMeterStoreKitTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F10000000000000000000003 /* Build configuration list for PBXNativeTarget "KeepMeterStoreKitTests" */;
+			buildPhases = (
+				C20000000000000000000002 /* Sources */,
+				C20000000000000000000001 /* Frameworks */,
+				C20000000000000000000003 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				H20000000000000000000002 /* PBXTargetDependency */,
+			);
+			name = KeepMeterStoreKitTests;
+			productName = KeepMeterStoreKitTests;
+			productReference = B20000000000000000000003 /* KeepMeterStoreKitTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -158,6 +209,10 @@
 				TargetAttributes = {
 					E10000000000000000000001 = {
 						CreatedOnToolsVersion = 26.0;
+					};
+					E20000000000000000000001 = {
+						CreatedOnToolsVersion = 26.0;
+						TestTargetID = E10000000000000000000001;
 					};
 				};
 			};
@@ -176,6 +231,7 @@
 			projectRoot = "";
 			targets = (
 				E10000000000000000000001 /* KeepMeter */,
+				E20000000000000000000001 /* KeepMeterStoreKitTests */,
 			);
 		};
 /* End PBXProject section */
@@ -188,6 +244,14 @@
 				A1000000000000000000000D /* Localizable.strings in Resources */,
 				A10000000000000000000011 /* Assets.xcassets in Resources */,
 				A10000000000000000000012 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C20000000000000000000003 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A20000000000000000000002 /* KeepMeter.storekit in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -216,7 +280,23 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C20000000000000000000002 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A20000000000000000000001 /* KeepMeterStoreKitTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		H20000000000000000000002 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E10000000000000000000001 /* KeepMeter */;
+			targetProxy = H20000000000000000000001 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin PBXVariantGroup section */
 		G10000000000000000000001 /* Localizable.strings */ = {
@@ -372,6 +452,40 @@
 			};
 			name = Release;
 		};
+		F20000000000000000000005 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = TKG684N5GL;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = de.kamilunavo.keepmeter.storekittests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/KeepMeter.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/KeepMeter";
+			};
+			name = Debug;
+		};
+		F20000000000000000000006 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = TKG684N5GL;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = de.kamilunavo.keepmeter.storekittests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/KeepMeter.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/KeepMeter";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -389,6 +503,15 @@
 			buildConfigurations = (
 				F20000000000000000000003 /* Debug */,
 				F20000000000000000000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F10000000000000000000003 /* Build configuration list for PBXNativeTarget "KeepMeterStoreKitTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F20000000000000000000005 /* Debug */,
+				F20000000000000000000006 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
