@@ -1,10 +1,10 @@
 # KeepMeter — Project State
 
 Last updated: 2026-08-19
-Status: ACTIVE — POPULATED SIMULATOR PERSISTENCE + VISUAL RUNTIME GREEN / APPLE + PHYSICAL-DEVICE QA OPEN
+Status: ACTIVE — ARM64 SIMULATOR RUNTIME HARDENED / APP STORE HANDOFF + APPLE DEVICE GATES OPEN
 Repository: `acciento89-bot/keepmeter`
 Default branch: `main`
-Current verified product checkpoint: `43e353fefd9b41f0d777ee2fcd475e7c62eef3b6`
+Current verified product checkpoint: `1e819921a977614c6364f31f4abab0170ed9ef1b`
 
 ## Handoff rule
 
@@ -47,6 +47,9 @@ Core loop: **Bought -> Use -> Measure -> Decide before deadline.**
 - Bundle ID `de.kamilunavo.keepmeter`.
 - Marketing version `0.1.0`, build `1`.
 - Utilities category; generated Info.plist.
+- Shared scheme archives Release and has `buildForArchiving = YES`.
+- Target currently uses Automatic Signing.
+- Apple development team used by existing Kamilunavo iOS projects: `TKG684N5GL`; KeepMeter does not yet persist `DEVELOPMENT_TEAM` in the Xcode project.
 
 ## DecisionEngine + AccessPolicy
 
@@ -78,7 +81,7 @@ Implemented:
 
 Automated evidence:
 - `ci/PersistenceSmoke.swift` writes a real file-backed store, destroys the first container, reopens it and verifies IDs, fields, dates, outcome, usage relationship and cost/use.
-- Gate 17 seeds deterministic purchases into the **real running iOS Simulator app**, terminates/relaunches without reseeding and verifies the same SwiftData IDs, prices, usage counts, outcomes and DecisionEngine results through an in-app DEBUG probe.
+- Gate 17 seeds deterministic purchases into the real running iOS Simulator app, terminates/relaunches without reseeding and verifies the same SwiftData IDs, prices, usage counts, outcomes and DecisionEngine results through an in-app DEBUG probe.
 - Gate 17 therefore proves populated Simulator persistence across app lifecycle, not merely standalone model-container reopening.
 
 Still open:
@@ -98,16 +101,17 @@ Implemented/hardened:
 - unverified transactions never unlock Pro.
 - `AppStore.sync()` only behind explicit Restore Purchases.
 
-In progress in PR #18:
-- App Store-compatible exact DE/EN Lifetime Pro copy.
-- €9.99 Germany launch-price decision / matching App Store price point.
-- IAP metadata-length/identity preflight.
+PR #18 currently prepares:
+- exact App Store-compatible DE/EN Lifetime Pro copy.
+- Germany launch-price decision: €9.99 one-time / matching App Store price point.
+- IAP identity/copy/length preflight.
+- machine-readable DE/EN App Store listing + field-limit preflight.
 - reviewer notes/path/review-screenshot handoff.
-- App Store listing field-limit preflight.
 - App Privacy handoff.
 
 Still open:
-- interactive local Free -> Pro -> Restore session.
+- merge PR #18 after full CI on the Gate 19 arm64 base.
+- interactive StoreKit Free -> Pro -> Restore automation/session.
 - matching App Store Connect Lifetime IAP creation/configuration.
 - sandbox/TestFlight purchase + restore session.
 
@@ -129,12 +133,12 @@ Still open:
 - VoiceOver grouping/hiding applied where appropriate in source.
 - `ci/localization-preflight.py` enforces EN/DE key parity, no duplicates/empties and matching format placeholders.
 
-Gate 17 runtime visual evidence:
+Runtime visual evidence:
 - fresh English/Light onboarding: clean.
 - populated English/Light dashboard: clean; deterministic KEEP and RETURN? purchases visible.
 - persisted German/Dark dashboard after terminate/relaunch: clean, localized and data-preserving.
-- all three screenshots manually inspected after final workflow.
-- automated native `ci/RuntimeScreenshotSignal.swift` rejects black/near-uniform screenshots so a visual blank cannot pass merely because a PNG exists.
+- native `ci/RuntimeScreenshotSignal.swift` rejects black/near-uniform screenshots.
+- Gate 19 arm64 artifact `9367177687` was manually inspected; all three representative screenshots are clean.
 
 Still open:
 - broader all-important-screen physical-device Light/Dark review.
@@ -143,18 +147,30 @@ Still open:
 
 ## Runtime CI hardening
 
-Runner: `macos-26-intel`.
+Required runner after Gate 19: **`macos-26` Apple Silicon / arm64**.
 
-Gate 17 added:
+Gate 17 provides:
 - DEBUG-only deterministic purchase seeding.
 - DEBUG-only persistence verification sentinel.
 - unique per-launch DEBUG token.
-- launch proof is written only once the SwiftUI scene is actually `.active`.
-- bounded foreground nudge for hosted CoreSimulator launch-client flakiness.
+- launch proof only when SwiftUI scene is actually `.active`.
+- bounded foreground nudge.
 - visual-signal validation for every runtime screenshot.
-- Release binary scan that rejects every DEBUG runtime token, sentinel name and seeded demo value.
+- Release binary scan rejecting every DEBUG runtime token, sentinel name and seeded demo value.
 
-No Gate 17 QA hooks are permitted in the Release binary.
+Gate 19 adds infrastructure hardening without weakening app assertions:
+- replaced `macos-26-intel` with `macos-26` arm64 for required iOS CI.
+- candidate iPhone simulators are ranked and setup may try at most two distinct UDIDs.
+- fallback is permitted only before KeepMeter has successfully installed.
+- `bootstatus` and `simctl install` client timeouts are non-authoritative because successful Gate 17 evidence proved they can be false negatives.
+- actual app-container materialization after the full bounded install/poll window is the setup authority.
+- once KeepMeter installs, there is no alternate-device retry for launch, persistence, screenshots or Release validation.
+
+Gate 19 proof:
+- PR #19.
+- workflow `32257672022` — full pipeline GREEN.
+- merge `1e819921a977614c6364f31f4abab0170ed9ef1b`.
+- screenshot artifact `9367177687`, manually inspected clean.
 
 ## Privacy
 
@@ -167,7 +183,7 @@ Current v1 baseline:
 - UserDefaults Required Reason `CA92.1`.
 - Release bundle manifest must plist-match source.
 
-PR #18 prepares `docs/APP_PRIVACY_HANDOFF.md`; final App Store privacy answers must still be rechecked against the actual release-candidate binary.
+PR #18 prepares `docs/APP_PRIVACY_HANDOFF.md`. Final App Store privacy answers must be rechecked against the actual release-candidate binary, especially if analytics, crash SDKs, networking/data collection or other SDKs are added.
 
 ## Brand / assets
 
@@ -185,48 +201,61 @@ Intended App Store URLs after live-deployment verification:
 - `https://kamilunavo.com/keepmeter/privacy`
 - `https://kamilunavo.com/support`
 
-Source merge is **not** treated as proof that those pages are live. Public deployment verification remains open.
+Source merge is not proof of public deployment. No generic SSH/Portainer deploy workflow or connected deployment tool is currently available for `acciento89-bot/kamilunavo`, so live verification/deployment remains open.
+
+## Signing / Archive path
+
+Known-good Kamilunavo signing model from ZweiCheck:
+- Apple Team ID `TKG684N5GL`.
+- Automatic Signing.
+- App Store Connect API key credentials supplied to GitHub Actions as `ASC_ISSUER_ID`, `ASC_KEY_ID`, `ASC_PRIVATE_KEY_B64` in that project.
+- archive via `xcodebuild ... -destination 'generic/platform=iOS' -allowProvisioningUpdates` with App Store Connect authentication key.
+- export with `method = app-store-connect`, `destination = upload`, `signingStyle = automatic`, matching team ID.
+
+Do not assume ZweiCheck repository secrets automatically exist in KeepMeter. KeepMeter should first receive the team ID + signing preflight as a separate gate. Do not upload an intermediate TestFlight build merely to test this configuration.
 
 ## Verified gates
 
-1. PR #1 — Functional MVP — workflow `32178808223` — merge `bf024336455d2a65da1e7d5f25ac87f142a3de8d` — GREEN.
-2. PR #2 — Visual polish — workflow `32179763750` — merge `45c53308ae41fc38eec5049c0181d4b0d7ede42b` — GREEN.
-3. PR #3 — StoreKit/reminder hardening — workflow `32182015862` — merge `0ec1e7b87fb3148462fcdc923770684e9bf67f1f` — GREEN.
-4. PR #4 — Notification QA controls — workflow `32182418696` — merge `e82813b2f53677112700c5f0cdbcb0db6a9402c7` — GREEN.
-5. PR #5 — Local StoreKit environment — workflow `32184529919` — merge `f9541c26a4ea63b78c302977a95566827c37b45f` — GREEN.
-6. PR #6 — Data integrity/accessibility — workflow `32185398795` — merge `f3718152acbd7b51ba90bbb399e3de6fc1116d64` — GREEN.
-7. PR #7 — File-backed SwiftData reopen — workflow `32186180485` — merge `2b93368f084ccf4808a0fa2a5e68c5d7dc51bc0c` — GREEN.
-8. PR #8 — Release compile — workflow `32186439191` — merge `dad79a620f375ed2c5eaa9ce4d40784130aab164` — GREEN.
-9. PR #9 — App Store release preflight — workflow `32186964254` — merge `5582461de995c8954f44b78c3314b3dbf2ee22c2` — GREEN.
-10. PR #10 — v1 brand lock — workflow `32187367731` — merge `eaadd52c37ce38e98e3ad96a55bda4eaea84291a` — GREEN.
-11. PR #11 — Final AppIcon hard gate — workflow `32189137123` — merge `cedc90a883713683217f663485a6d8f2e09fd63a` — GREEN.
-12. PR #12 — Production StoreKit entitlement recovery — workflow `32189569075` — merge `56f501c4f220032ba5fb3ab88dd409b94c5524b6` — GREEN.
-13. PR #13 — Product rules + localization — workflow `32212716880` — merge `fe88224b38011d25934b49a1edb2fc2030425306` — GREEN.
-14. PR #14 — Required-reason Privacy Manifest — workflow `32212975137` — merge `223eb041a0e4f306fd5dc0c5ed29deb7f12cd197` — GREEN.
-15. PR #15 — Booted Simulator runtime + screenshots + relaunch — workflow `32215165699` — merge `9c5b33bf0a0123afe243a0b32bd4d0139537cd82` — GREEN.
-16. PR #16 — Central Free/Pro AccessPolicy — workflow `32216276685` — merge `14f265b4fee61d2be635cb2ba0ed15b994904924` — GREEN.
-17. PR #17 — Populated Simulator persistence + active-scene launch proof + visual-signal screenshots + Release QA isolation — workflow `32249500834` — merge `43e353fefd9b41f0d777ee2fcd475e7c62eef3b6` — GREEN and final screenshots manually inspected.
+1. PR #1 — Functional MVP — merge `bf024336455d2a65da1e7d5f25ac87f142a3de8d` — GREEN.
+2. PR #2 — Visual polish — merge `45c53308ae41fc38eec5049c0181d4b0d7ede42b` — GREEN.
+3. PR #3 — StoreKit/reminder hardening — merge `0ec1e7b87fb3148462fcdc923770684e9bf67f1f` — GREEN.
+4. PR #4 — Notification QA controls — merge `e82813b2f53677112700c5f0cdbcb0db6a9402c7` — GREEN.
+5. PR #5 — Local StoreKit environment — merge `f9541c26a4ea63b78c302977a95566827c37b45f` — GREEN.
+6. PR #6 — Data integrity/accessibility — merge `f3718152acbd7b51ba90bbb399e3de6fc1116d64` — GREEN.
+7. PR #7 — File-backed SwiftData reopen — merge `2b93368f084ccf4808a0fa2a5e68c5d7dc51bc0c` — GREEN.
+8. PR #8 — Release compile — merge `dad79a620f375ed2c5eaa9ce4d40784130aab164` — GREEN.
+9. PR #9 — App Store release preflight — merge `5582461de995c8954f44b78c3314b3dbf2ee22c2` — GREEN.
+10. PR #10 — v1 brand lock — merge `eaadd52c37ce38e98e3ad96a55bda4eaea84291a` — GREEN.
+11. PR #11 — Final AppIcon hard gate — merge `cedc90a883713683217f663485a6d8f2e09fd63a` — GREEN.
+12. PR #12 — Production StoreKit entitlement recovery — merge `56f501c4f220032ba5fb3ab88dd409b94c5524b6` — GREEN.
+13. PR #13 — Product rules + localization — merge `fe88224b38011d25934b49a1edb2fc2030425306` — GREEN.
+14. PR #14 — Required-reason Privacy Manifest — merge `223eb041a0e4f306fd5dc0c5ed29deb7f12cd197` — GREEN.
+15. PR #15 — Booted Simulator runtime + screenshots + relaunch — merge `9c5b33bf0a0123afe243a0b32bd4d0139537cd82` — GREEN.
+16. PR #16 — Central Free/Pro AccessPolicy — merge `14f265b4fee61d2be635cb2ba0ed15b994904924` — GREEN.
+17. PR #17 — Populated Simulator persistence + active-scene launch proof + visual-signal screenshots + Release QA isolation — workflow `32249500834` — merge `43e353fefd9b41f0d777ee2fcd475e7c62eef3b6` — GREEN; screenshots manually inspected.
+18. PR #19 — arm64 `macos-26` runtime infrastructure + bounded two-device setup fallback — workflow `32257672022` — merge `1e819921a977614c6364f31f4abab0170ed9ef1b` — GREEN; artifact `9367177687` manually inspected.
 
 Major product/source/design passes must remain CI-green before merge/TestFlight.
 
 ## Release status
 
 DONE / automated:
-- functional/visual Debug + Release builds.
-- AppIcon.
-- Privacy Manifest.
+- functional Debug + Release builds.
+- AppIcon and Privacy Manifest.
 - DecisionEngine / AccessPolicy / EN-DE regression tests.
 - file-backed SwiftData reopen.
-- booted Simulator lifecycle.
 - populated Simulator SwiftData persistence across terminate/relaunch.
 - representative Light/EN and Dark/DE runtime visuals with anti-black-screen gate.
 - DEBUG QA isolation from Release binary.
+- required iOS CI migrated and proven on `macos-26` arm64.
+- bounded pre-install simulator fallback.
 
 OPEN:
-- PR #18 App Store/IAP metadata hardening must be rebased/synced onto Gate 17 and pass full CI.
-- live verification of public support/privacy URLs.
+- PR #18 App Store/IAP/listing/privacy handoff must pass full CI against Gate 19 and merge.
+- KeepMeter `DEVELOPMENT_TEAM = TKG684N5GL` + signing preflight.
+- live verification/deployment of public support/privacy URLs.
 - App Store Connect app record + Lifetime IAP.
-- interactive StoreKit purchase/restore.
+- interactive StoreKit purchase/restore automation or session.
 - physical-device persistence/notification/VoiceOver/Dynamic Type checks.
 - signed Release Archive.
 - first TestFlight upload.
@@ -236,9 +265,9 @@ No TestFlight build has been uploaded yet.
 
 ## Immediate next steps
 
-1. Sync PR #18 onto Gate 17, preserving the hardened runtime/visual/Release-isolation pipeline, then make it fully green and merge.
-2. Verify/deploy public KeepMeter privacy/support pages.
-3. Create/configure the matching App Store Connect Lifetime IAP and app record when authenticated Apple-side access is available.
-4. Automate or exercise local StoreKit Free -> Pro -> restore where possible.
+1. Sync PR #18 onto the Gate 19 arm64 CI base, run the complete metadata + runtime + Release pipeline, then merge only when fully green.
+2. Add KeepMeter Apple Team ID `TKG684N5GL` and hard signing assertions in a separate post-#18 gate; do not upload yet.
+3. Prepare a proper StoreKitTest/XCTest purchase-entitlement test rather than DEBUG fake entitlement; keep it experimental/non-blocking until Xcode 26.6 behavior is proven stable.
+4. Verify/deploy public KeepMeter privacy/support pages when server deployment access is available.
 5. Perform physical-device notification/persistence/accessibility gates.
-6. Only then create the first signed TestFlight build; do not burn intermediate TestFlight build numbers.
+6. Only after those gates create the first signed TestFlight build; do not burn intermediate TestFlight build numbers.
