@@ -5,11 +5,27 @@ settings_file="$(mktemp)"
 icon_info_file="$(mktemp)"
 trap 'rm -f "$settings_file" "$icon_info_file"' EXIT
 
+signing_config="Config/Signing.xcconfig"
+if [[ ! -s "$signing_config" ]]; then
+  echo "::error title=Signing preflight::Signing xcconfig is missing or empty"
+  exit 1
+fi
+
+grep -F 'DEVELOPMENT_TEAM = TKG684N5GL' "$signing_config" >/dev/null || {
+  echo "::error title=Signing preflight::Signing xcconfig must lock Apple team TKG684N5GL"
+  exit 1
+}
+grep -F 'CODE_SIGN_STYLE = Automatic' "$signing_config" >/dev/null || {
+  echo "::error title=Signing preflight::Signing xcconfig must use Automatic signing"
+  exit 1
+}
+
 xcodebuild \
   -project KeepMeter.xcodeproj \
   -scheme KeepMeter \
   -configuration Release \
   -sdk iphonesimulator \
+  -xcconfig "$signing_config" \
   -showBuildSettings > "$settings_file"
 
 setting_value() {
@@ -41,6 +57,30 @@ assert_setting TARGETED_DEVICE_FAMILY 1
 assert_setting INFOPLIST_KEY_CFBundleDisplayName KeepMeter
 assert_setting INFOPLIST_KEY_LSApplicationCategoryType public.app-category.utilities
 assert_setting ASSETCATALOG_COMPILER_APPICON_NAME AppIcon
+assert_setting CODE_SIGN_STYLE Automatic
+assert_setting DEVELOPMENT_TEAM TKG684N5GL
+
+scheme="KeepMeter.xcodeproj/xcshareddata/xcschemes/KeepMeter.xcscheme"
+if [[ ! -s "$scheme" ]]; then
+  echo "::error title=Archive preflight::Shared KeepMeter scheme is missing"
+  exit 1
+fi
+
+grep -F 'buildForArchiving = "YES"' "$scheme" >/dev/null || {
+  echo "::error title=Archive preflight::KeepMeter target must be enabled for archiving"
+  exit 1
+}
+grep -F '<ArchiveAction' "$scheme" >/dev/null || {
+  echo "::error title=Archive preflight::KeepMeter scheme has no ArchiveAction"
+  exit 1
+}
+grep -F 'buildConfiguration = "Release"' "$scheme" >/dev/null || {
+  echo "::error title=Archive preflight::KeepMeter scheme must archive the Release configuration"
+  exit 1
+}
+
+echo "✓ Signing xcconfig = Automatic / TKG684N5GL"
+echo "✓ Shared scheme is configured for Release archiving"
 
 marketing_version="$(setting_value MARKETING_VERSION)"
 build_number="$(setting_value CURRENT_PROJECT_VERSION)"
