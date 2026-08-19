@@ -1,10 +1,10 @@
 # KeepMeter — Project State
 
 Last updated: 2026-08-19
-Status: ACTIVE — APP STORE HANDOFF + ARM64 RUNTIME + SIGNING PREFLIGHT GREEN / APPLE DEVICE + ASC GATES OPEN
+Status: ACTIVE — APP STORE HANDOFF + ARM64 RUNTIME + REQUIRED STOREKIT ENTITLEMENT + SIGNING PREFLIGHT GREEN / APPLE DEVICE + ASC GATES OPEN
 Repository: `acciento89-bot/keepmeter`
 Default branch: `main`
-Current verified product checkpoint: `4d63db7d32ec24ffd4beb59e506369e2c25ba2c1`
+Current verified product checkpoint: `222464d21c888fdae5d01b07b6569a76ca2749a7`
 
 ## Handoff rule
 
@@ -84,6 +84,7 @@ Automated evidence:
 - Gate #17 seeds deterministic purchases into the real running iOS Simulator app, terminates/relaunches without reseeding and verifies the same SwiftData IDs, prices, usage counts, outcomes and DecisionEngine results through an in-app DEBUG probe.
 - Gate #18 reran the same populated persistence/visual path on the final App Store metadata state and passed.
 - Gate #20 reran the complete running-app persistence/visual path after signing/runtime hardening and passed unchanged.
+- Gate #21 required-CI promotion reran the same full normal runtime/Release pipeline on workflow `32284909516` and passed unchanged alongside the now-required StoreKit entitlement job.
 
 Still open:
 - equivalent force-quit/relaunch check on a physical iPhone.
@@ -114,12 +115,15 @@ Implemented/hardened:
 - unverified transactions never unlock Pro.
 - `AppStore.sync()` only behind explicit Restore Purchases.
 - `docs/IAP_LIFETIME_PRO.md` is the exact App Store Connect IAP handoff.
+- Gate #21 adds a real iOS Simulator-hosted StoreKitTest/XCTest against the production `EntitlementStore` and exact `KeepMeter.storekit` Lifetime product.
+- the Gate #21 test proves Free start -> real `SKTestSession` Lifetime transaction -> Pro unlock through `Transaction.updates` / `Transaction.currentEntitlements` -> entitlement recovery in a newly-created `EntitlementStore` -> entitlement removal after clearing the StoreKitTest transaction.
+- external StoreKitTest transaction propagation uses a bounded ~5-second wait instead of an immediate race-prone assertion; no fake entitlement, DEBUG Pro bypass or weakened assertion is used.
+- the StoreKit job is now required CI: `continue-on-error` was removed in PR #25 and a StoreKit failure makes the workflow fail.
 
 Still open:
-- interactive StoreKit Free -> Pro -> Restore automation/session.
 - matching App Store Connect Lifetime IAP creation/configuration.
 - release-candidate IAP review screenshot.
-- sandbox/TestFlight purchase + entitlement + restore.
+- sandbox/TestFlight purchase + entitlement + explicit Restore Purchases (`AppStore.sync()`) validation.
 
 ## App Store listing handoff
 
@@ -161,13 +165,11 @@ Still open:
 - `ci/localization-preflight.py` enforces EN/DE key parity, no duplicates/empties and matching format placeholders.
 - native `ci/RuntimeScreenshotSignal.swift` rejects black/near-uniform screenshots.
 
-Latest Gate #20 runtime artifact:
-- workflow `32276400054`.
-- artifact `9374353233`.
-- fresh EN/Light onboarding manually inspected clean.
-- populated EN/Light dashboard manually inspected clean.
-- persisted DE/Dark dashboard manually inspected clean.
-- same deterministic KEEP / RETURN? purchase data survived relaunch.
+Latest required-CI runtime artifact:
+- Gate #21 workflow `32284909516`.
+- artifact `9377487868` (`keepmeter-runtime-screenshots`).
+- runtime screenshot generation and native visual-signal validation passed.
+- this Gate #21 artifact was not manually inspected in this pass; the latest manually inspected screenshots remain Gate #20 artifact `9374353233`, which was clean for fresh EN/Light onboarding, populated EN/Light dashboard and persisted DE/Dark dashboard.
 
 Still open:
 - broader all-important-screen physical-device Light/Dark review.
@@ -200,6 +202,12 @@ Gate #20 extends hosted CoreSimulator hardening without weakening the app eviden
 - if the already-installed simulator cannot produce the unique active-scene sentinel because its UI services are unhealthy, the harness may perform exactly one shutdown/reboot of the same UDID.
 - the existing KeepMeter installation must still resolve after reboot and the normal active-scene proof must then pass.
 - no alternate simulator is allowed after successful installation.
+
+Gate #21 adds a separate required StoreKit lane:
+- pinned to Xcode 26.2 and iOS 26.2 on `macos-26` arm64.
+- uses an iPhone 17 Pro Max simulator and the actual app/test target rather than the rejected macOS off-device harness.
+- exercises the exact Lifetime product and real production entitlement path.
+- remains independent of App Store Connect credentials, sandbox accounts and TestFlight.
 
 ## Website / public release pages
 
@@ -242,6 +250,7 @@ Gate #20 intentionally does not add credentials, certificates, provisioning prof
 18. PR #19 — arm64 `macos-26` runtime infrastructure + bounded two-device pre-install fallback — workflow `32257672022` — merge `1e819921a977614c6364f31f4abab0170ed9ef1b` — GREEN; artifact `9367177687` manually inspected.
 19. PR #18 — App Store/IAP/listing/privacy handoff on Gate #19 arm64 base — workflow `32258911074` — merge `85160a6e66774bdbd1128fa066abc5bd66371d52` — GREEN; artifact `9367666345` manually inspected.
 20. PR #20 — Apple team/signing/archive preflight + same-device CoreSimulator lifecycle hardening — workflow `32276400054` — merge `4d63db7d32ec24ffd4beb59e506369e2c25ba2c1` — GREEN; artifact `9374353233` manually inspected.
+21. PR #24 + PR #25 — iOS Simulator StoreKitTest Lifetime entitlement proof + promotion to required CI. PR #24 fixed the asynchronous entitlement-propagation race and passed experimental StoreKit job `96167793044` in workflow `32283455910`, then merged as `e3c0bf0dea731e31a36a906b9431c0df6044f52f`. PR #25 removed `continue-on-error`, renamed the job to required `StoreKit entitlement XCTest`, and workflow `32284909516` passed both the required StoreKit job `96172034950` and full normal build job `96172035320`; StoreKit result: 1 test, 0 failures, `TEST SUCCEEDED`; merge `222464d21c888fdae5d01b07b6569a76ca2749a7` — GREEN. Historical PR #23 is not treated as Gate #21 proof because it merged while the experimental StoreKit job was still allowed to fail.
 
 Major product/source/design passes must remain CI-green before merge/TestFlight.
 
@@ -256,6 +265,7 @@ DONE / automated:
 - DEBUG QA isolation from Release binary.
 - required iOS CI proven on `macos-26` arm64 with bounded pre-install fallback and same-device recovery.
 - exact Lifetime Pro v1 IAP handoff.
+- required StoreKitTest/XCTest proof of the real Free -> Lifetime Pro entitlement/recovery/removal path on Xcode 26.2 / iOS 26.2.
 - exact DE/EN App Store listing source and field-limit checks.
 - App Privacy handoff.
 - Apple team `TKG684N5GL`, Automatic Signing and Release archive scheme locked by CI.
@@ -263,19 +273,18 @@ DONE / automated:
 OPEN:
 - live verification/deployment of public support/privacy URLs.
 - App Store Connect app record + Lifetime IAP creation/configuration.
-- interactive StoreKit purchase/restore automation or session.
 - physical-device persistence/notification/VoiceOver/Dynamic Type checks.
 - signed Release Archive.
 - first TestFlight upload.
-- sandbox/TestFlight Lifetime Pro purchase + restore.
+- sandbox/TestFlight Lifetime Pro purchase + entitlement + explicit restore.
 
 No TestFlight build has been uploaded yet.
 
 ## Immediate next steps
 
-1. Gate #21: prepare a proper StoreKitTest/XCTest Free -> Lifetime Pro entitlement test rather than DEBUG fake entitlement; keep it isolated/non-blocking until Xcode 26.6 behavior is proven stable.
-2. Verify/deploy public KeepMeter privacy/support pages when authenticated server deployment access is available.
-3. Create/configure the App Store Connect app record and Lifetime IAP when authenticated Apple-side access is available.
-4. Perform physical-device notification/persistence/accessibility gates.
-5. Create the first signed Release Archive only after the Apple-side prerequisites are ready.
-6. Upload the first TestFlight build only when the remaining device/IAP gates justify consuming the first build number.
+1. Verify/deploy public KeepMeter privacy/support pages when authenticated server deployment access is available.
+2. Create/configure the App Store Connect app record and Lifetime IAP when authenticated Apple-side access is available.
+3. Perform physical-device notification/persistence/accessibility gates.
+4. Create the first signed Release Archive only after the Apple-side prerequisites are ready.
+5. Upload the first TestFlight build only when the remaining device/IAP gates justify consuming the first build number.
+6. Validate the real sandbox/TestFlight Lifetime Pro purchase, entitlement and explicit Restore Purchases path before App Store submission.
