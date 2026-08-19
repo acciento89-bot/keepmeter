@@ -70,25 +70,30 @@ final class KeepMeterStoreKitTests: XCTestCase {
             "StoreKitTest returned a transaction for the wrong product"
         )
 
+        let unlocked = await waitForEntitlement(true, in: store)
         XCTAssertTrue(
-            await waitForEntitlement(true, in: store),
+            unlocked,
             "Lifetime Pro must unlock after the external StoreKitTest transaction propagates through Transaction.updates/currentEntitlements"
         )
 
         let recreatedStore = EntitlementStore()
+        let recovered = await waitForEntitlement(true, in: recreatedStore)
         XCTAssertTrue(
-            await waitForEntitlement(true, in: recreatedStore),
+            recovered,
             "A newly-created EntitlementStore must recover the Lifetime entitlement without a fake Pro flag or manual sync"
         )
 
         session.clearTransactions()
 
+        let removedFromOriginalStore = await waitForEntitlement(false, in: store)
         XCTAssertTrue(
-            await waitForEntitlement(false, in: store),
+            removedFromOriginalStore,
             "Removing the StoreKit test transaction must remove Pro"
         )
+
+        let removedFromRecreatedStore = await waitForEntitlement(false, in: recreatedStore)
         XCTAssertTrue(
-            await waitForEntitlement(false, in: recreatedStore),
+            removedFromRecreatedStore,
             "Removing the StoreKit test transaction must remove the recovered Pro entitlement"
         )
     }
