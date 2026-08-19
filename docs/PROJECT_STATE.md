@@ -1,12 +1,13 @@
 # KeepMeter — Project State
 
 Last updated: 2026-08-19
-Status: ACTIVE — TESTFLIGHT LIFETIME PURCHASE + RESTORE + RELAUNCH VERIFIED / IAP REVIEW SCREENSHOT IN ASC / FINAL ASC METADATA + PHYSICAL QA + LIVE URL GATES OPEN
+Status: ACTIVE — APP STORE REVIEW SUBMITTED / TESTFLIGHT LIFETIME PURCHASE + RESTORE + RELAUNCH VERIFIED / APPLE REVIEW DECISION PENDING
 Repository: `acciento89-bot/keepmeter`
 Default branch: `main`
 Current verified product checkpoint: `968987a52bc675b27451785618a6132fe3eee538`
 Current verified release checkpoint: TestFlight workflow run `32294826597` / upload job `96203597997` — SUCCESS
 Current physical/TestFlight checkpoint: Gate #26 — user-confirmed on 2026-08-19: build installable, real Lifetime purchase works, IAP review screenshot uploaded in App Store Connect, explicit Restore Purchases works, and Pro entitlement survives/reloads after restart.
+Current App Store submission checkpoint: Gate #27 — user-confirmed on 2026-08-19: KeepMeter `0.1.0 (1)` and its Lifetime Pro IAP were submitted to Apple App Review. Apple review outcome is pending and is not independently API-verified from this repository.
 
 ## Handoff rule
 
@@ -18,8 +19,9 @@ For future work:
 3. Continue from `Immediate next steps`.
 4. Update this file after every major product/release pass.
 5. Never treat workflow-level green as proof if a relevant job is allowed to fail; StoreKit counts only when its required job is actually green.
-6. Never claim App Store Connect/TestFlight state beyond the evidence explicitly recorded here.
+6. Never claim App Store Connect/TestFlight/App Review state beyond the evidence explicitly recorded here.
 7. User-confirmed physical/App Store Connect actions must be labeled as user-confirmed unless independently verified through an API/log/source.
+8. Do not rewrite unresolved internal QA as complete merely because App Review submission was accepted.
 
 ## Product thesis
 
@@ -93,8 +95,8 @@ Automated evidence:
 - Gate #17 added deterministic running-app SwiftData seed/relaunch verification.
 - Later required CI gates repeatedly reran the persistence/runtime path successfully.
 
-Still open:
-- optional broader physical purchase-data persistence spot-check beyond the entitlement restart validation already confirmed in Gate #26.
+Still open / optional hardening:
+- broader physical purchase-data persistence spot-check beyond the entitlement restart validation already confirmed in Gate #26.
 
 ## StoreKit / Lifetime Pro
 
@@ -154,10 +156,20 @@ Required CI cross-checks:
 - guarded TestFlight workflow path/main/confirmation/build-number-management.
 - Privacy baseline: Data Not Collected / Tracking No, subject to mandatory final-binary re-audit.
 
-Still requiring explicit final App Store Connect review before submission:
-- final App Store listing fields and screenshots/metadata as applicable.
-- final App Privacy answers.
-- EU DSA trader-status/account/app setting; repository state is not a legal determination.
+Final App Store Connect entry/submission — USER-CONFIRMED on 2026-08-19:
+- German listing completed.
+- English (U.S.) listing completed.
+- App Privacy completed with the current v1 local-only privacy baseline.
+- age rating completed.
+- Content Rights completed.
+- DSA/account/app declaration reviewed/completed by the user; repository does not infer the legal classification.
+- exact build `0.1.0 (1)` selected for the App Store version.
+- Lifetime Pro review information includes the real TestFlight review screenshot.
+- final App Review submission was sent to Apple.
+
+Boundary:
+- submission acceptance does not equal approval.
+- current exact Apple review state (for example Waiting for Review / In Review / Approved / Rejected) is not independently verified here unless separately recorded.
 
 ## Privacy
 
@@ -170,7 +182,9 @@ Current v1 baseline:
 - UserDefaults Required Reason `CA92.1`.
 - Release bundle manifest must plist-match source.
 
-Re-audit if analytics, crash SDKs, networking/data collection, push-token handling or other off-device behavior is added.
+App Store Connect privacy entry is user-confirmed complete for the current v1 baseline.
+
+Re-audit if analytics, crash SDKs, networking/data collection, push-token handling or other off-device behavior is added in a future binary.
 
 ## Notifications / accessibility / visual
 
@@ -187,11 +201,13 @@ Physical/TestFlight evidence:
 - Gate #25 reached the real TestFlight paywall and completed a real Lifetime purchase.
 - Gate #26 confirmed IAP review screenshot upload, explicit Restore Purchases and entitlement recovery after restart.
 
-Still open:
+Still open / internal post-submission QA:
 - real scheduled-notification delivery on physical device/TestFlight build.
 - broader representative Light/Dark physical review.
 - physical VoiceOver pass.
 - physical Dynamic Type spot-check.
+
+These checks remain useful release hardening, but App Review was submitted before they were separately documented as complete.
 
 ## Website / public release pages
 
@@ -237,6 +253,15 @@ Gate #26 StoreKit recovery + IAP review evidence — USER-CONFIRMED:
 - explicit Restore Purchases path succeeds on the TestFlight build.
 - restarting/relaunching after purchase correctly retains or reloads the Lifetime Pro entitlement.
 
+Gate #27 App Review submission — USER-CONFIRMED:
+- DE and EN-US App Store listing entry completed.
+- App Privacy and age rating completed.
+- Content Rights completed.
+- DSA/account/app declaration reviewed/completed by user.
+- exact build `0.1.0 (1)` selected.
+- final submission including KeepMeter and the Lifetime Pro release path was sent to Apple App Review.
+- review outcome remains pending; no approval is claimed.
+
 ## Verified gates
 
 1–16 — MVP/product rules/visual polish/StoreKit-reminder hardening/data integrity/accessibility/persistence/release compile/App Store preflight/brand/AppIcon/privacy/runtime/access policy — GREEN and merged.
@@ -249,7 +274,8 @@ Gate #26 StoreKit recovery + IAP review evidence — USER-CONFIRMED:
 23. PR #29 — exact ASC machine-readable setup + immutable SKU + Apple-side runbook + required handoff preflight — workflow `32290236121` — GREEN.
 24. Manual TestFlight workflow run `32294826597`, job `96203597997` — signed exact KeepMeter `0.1.0 (1)`, Apple accepted upload, `Upload succeeded`, `EXPORT SUCCEEDED` — GREEN. Gate #24 docs PR #31 reran required StoreKit + full normal runtime/Release/Privacy CI and merged as `7e9f02a5a09fc9d59a4b2d266346810b69d62ba6`.
 25. Physical/TestFlight validation — user-confirmed 2026-08-19: processed/installable build, real Lifetime offer, successful real purchase, real paywall screenshot captured. Gate #25 docs PR #32 reran required StoreKit + full normal runtime/Release/Privacy CI and merged as `e7a85015ba74500880b4a448b744ee243b279d22`.
-26. Physical/TestFlight recovery + ASC IAP screenshot — user-confirmed 2026-08-19: App Review Screenshot uploaded in ASC, explicit Restore Purchases succeeds, and Lifetime entitlement survives/reloads after restart. Gate #26 documentation must pass required CI before merge.
+26. Physical/TestFlight recovery + ASC IAP screenshot — user-confirmed 2026-08-19: App Review Screenshot uploaded in ASC, explicit Restore Purchases succeeds, and Lifetime entitlement survives/reloads after restart. Gate #26 docs PR #33 reran required StoreKit + full normal runtime/Release/Privacy CI and merged as `b86392bb00aa68eb3574d01fd0caf72eabc26ef8`.
+27. App Store Connect final metadata + App Review submission — user-confirmed 2026-08-19: DE/EN listing, App Privacy, age rating, Content Rights, DSA review, build selection and final submission completed. Gate #27 documentation must pass required CI before merge. Apple review result pending.
 
 Major product/source/design passes must remain CI-green before merge/TestFlight.
 
@@ -274,20 +300,28 @@ DONE / verified or explicitly user-confirmed:
 - real IAP App Review Screenshot uploaded in ASC.
 - explicit Restore Purchases works.
 - Lifetime entitlement persists/reloads after restart.
+- German + English (U.S.) App Store listing completed.
+- App Privacy completed for current v1 baseline.
+- age rating completed.
+- Content Rights completed.
+- DSA/account/app declaration reviewed/completed by user.
+- build `0.1.0 (1)` selected for review.
+- App Review submission sent to Apple.
 
-OPEN / external or device-only:
-- remaining physical QA: scheduled reminder delivery, VoiceOver, Dynamic Type and representative Light/Dark review.
-- independent live verification of KeepMeter privacy/support URLs.
-- final App Store listing entry/review in ASC.
-- final App Privacy entry/review in ASC.
-- EU DSA trader-status/account/app verification.
-- final App Store submission readiness.
+PENDING / external:
+- Apple App Review decision.
+- independent live verification of KeepMeter privacy/support URLs remains unresolved in this session.
+
+OPEN / internal post-submission hardening:
+- scheduled reminder delivery on physical device.
+- VoiceOver spot-check.
+- Dynamic Type spot-check.
+- representative Light/Dark physical review.
 
 ## Immediate next steps
 
-1. Perform the remaining physical-device QA: scheduled reminder delivery, VoiceOver, Dynamic Type and representative Light/Dark screens.
-2. Independently verify `https://kamilunavo.com/keepmeter/privacy` and `https://kamilunavo.com/support` publicly.
-3. Finish/review the App Store listing and screenshots/metadata in App Store Connect.
-4. Enter/review final App Privacy answers in App Store Connect.
-5. Verify EU DSA trader-status/account/app setting without inferring a legal conclusion from repository state.
-6. When those gates are green, prepare the final App Store submission.
+1. Track the Apple App Review status for KeepMeter `0.1.0 (1)` and Lifetime Pro; record any status change or reviewer message without assuming approval before Apple reports it.
+2. If Apple raises an issue, reproduce it against the exact submitted build before changing source or metadata.
+3. Optionally finish the remaining physical-device hardening checks while review is pending: scheduled reminder delivery, VoiceOver, Dynamic Type, Light/Dark.
+4. Independently verify `https://kamilunavo.com/keepmeter/privacy` and `https://kamilunavo.com/support` publicly when an external resolver/source can confirm them.
+5. On approval, record whether release is automatic or requires the configured manual release action before claiming the app is live.
