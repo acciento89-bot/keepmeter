@@ -6,7 +6,16 @@ STOREKIT_PATH = Path("KeepMeter/StoreKit/KeepMeter.storekit")
 EXPECTED_PRODUCT_ID = "de.kamilunavo.keepmeter.pro.lifetime"
 EXPECTED_REFERENCE_NAME = "KeepMeter Lifetime Pro"
 EXPECTED_TYPE = "NonConsumable"
-REQUIRED_LOCALES = {"de_DE", "en_US"}
+EXPECTED_LOCALIZATIONS = {
+    "de_DE": {
+        "displayName": "KeepMeter Pro – Lifetime",
+        "description": "Unbegrenzt aktive Käufe. Einmal zahlen.",
+    },
+    "en_US": {
+        "displayName": "KeepMeter Pro Lifetime",
+        "description": "Unlimited active purchases. Pay once.",
+    },
+}
 
 
 def fail(message: str) -> None:
@@ -34,15 +43,22 @@ def main() -> None:
         fail("reference name exceeds App Store Connect 64-character limit")
 
     localizations = product.get("localizations", [])
-    locales = {item.get("locale") for item in localizations}
-    if locales != REQUIRED_LOCALES:
-        fail(f"expected localizations {sorted(REQUIRED_LOCALES)}, found {sorted(locales)}")
+    by_locale = {item.get("locale"): item for item in localizations}
+    if set(by_locale) != set(EXPECTED_LOCALIZATIONS):
+        fail(
+            f"expected localizations {sorted(EXPECTED_LOCALIZATIONS)}, "
+            f"found {sorted(by_locale)}"
+        )
 
-    for item in localizations:
-        locale = item["locale"]
+    for locale, expected in EXPECTED_LOCALIZATIONS.items():
+        item = by_locale[locale]
         display_name = item.get("displayName", "")
         description = item.get("description", "")
 
+        if display_name != expected["displayName"]:
+            fail(f"{locale} display name drifted from the App Store handoff")
+        if description != expected["description"]:
+            fail(f"{locale} description drifted from the App Store handoff")
         if not (2 <= len(display_name) <= 30):
             fail(f"{locale} display name length {len(display_name)} is outside 2...30")
         if not description or len(description) > 45:
@@ -53,6 +69,7 @@ def main() -> None:
 
     print(f"✓ Product ID = {EXPECTED_PRODUCT_ID}")
     print("✓ Product type = NonConsumable")
+    print("✓ App Store handoff copy matches local StoreKit metadata")
     print("KeepMeter App Store IAP metadata preflight passed")
 
 
