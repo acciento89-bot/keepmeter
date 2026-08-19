@@ -1,10 +1,10 @@
 # KeepMeter — Project State
 
 Last updated: 2026-08-19
-Status: ACTIVE — APP STORE HANDOFF + ARM64 RUNTIME + REQUIRED STOREKIT ENTITLEMENT + SIGNING PREFLIGHT GREEN / APPLE DEVICE + ASC GATES OPEN
+Status: ACTIVE — APP STORE HANDOFF + ARM64 RUNTIME + REQUIRED STOREKIT ENTITLEMENT + GUARDED TESTFLIGHT LANE + SIGNING PREFLIGHT GREEN / APPLE DEVICE + ASC GATES OPEN
 Repository: `acciento89-bot/keepmeter`
 Default branch: `main`
-Current verified product checkpoint: `222464d21c888fdae5d01b07b6569a76ca2749a7`
+Current verified product checkpoint: `8828fc2f706d2dec44ea48536d4928026aaa9d75`
 
 ## Handoff rule
 
@@ -50,6 +50,7 @@ Core loop: **Bought -> Use -> Measure -> Decide before deadline.**
 - Shared scheme archives Release and has `buildForArchiving = YES`.
 - Target uses Automatic Signing.
 - Gate #20 locks Apple team `TKG684N5GL` in versioned signing configuration and CI preflight.
+- Gate #22 locks the first manual TestFlight lane to exact release identity `0.1.0 (1)` until deliberately changed.
 
 ## DecisionEngine + AccessPolicy
 
@@ -85,6 +86,7 @@ Automated evidence:
 - Gate #18 reran the same populated persistence/visual path on the final App Store metadata state and passed.
 - Gate #20 reran the complete running-app persistence/visual path after signing/runtime hardening and passed unchanged.
 - Gate #21 required-CI promotion reran the same full normal runtime/Release pipeline on workflow `32284909516` and passed unchanged alongside the now-required StoreKit entitlement job.
+- Gate #22 reran the complete normal runtime/Release pipeline on workflow `32287632445` after adding the guarded manual TestFlight lane; persistence/runtime remained green.
 
 Still open:
 - equivalent force-quit/relaunch check on a physical iPhone.
@@ -119,6 +121,7 @@ Implemented/hardened:
 - the Gate #21 test proves Free start -> real `SKTestSession` Lifetime transaction -> Pro unlock through `Transaction.updates` / `Transaction.currentEntitlements` -> entitlement recovery in a newly-created `EntitlementStore` -> entitlement removal after clearing the StoreKitTest transaction.
 - external StoreKitTest transaction propagation uses a bounded ~5-second wait instead of an immediate race-prone assertion; no fake entitlement, DEBUG Pro bypass or weakened assertion is used.
 - the StoreKit job is now required CI: `continue-on-error` was removed in PR #25 and a StoreKit failure makes the workflow fail.
+- Gate #22 reran the required StoreKit lane unchanged in workflow `32287632445`; job `96180829076` passed before merge.
 
 Still open:
 - matching App Store Connect Lifetime IAP creation/configuration.
@@ -166,10 +169,10 @@ Still open:
 - native `ci/RuntimeScreenshotSignal.swift` rejects black/near-uniform screenshots.
 
 Latest required-CI runtime artifact:
-- Gate #21 workflow `32284909516`.
-- artifact `9377487868` (`keepmeter-runtime-screenshots`).
+- Gate #22 workflow `32287632445`.
+- artifact `9378499165` (`keepmeter-runtime-screenshots`).
 - runtime screenshot generation and native visual-signal validation passed.
-- this Gate #21 artifact was not manually inspected in this pass; the latest manually inspected screenshots remain Gate #20 artifact `9374353233`, which was clean for fresh EN/Light onboarding, populated EN/Light dashboard and persisted DE/Dark dashboard.
+- this Gate #22 artifact was not manually inspected in this pass; the latest manually inspected screenshots remain Gate #20 artifact `9374353233`, which was clean for fresh EN/Light onboarding, populated EN/Light dashboard and persisted DE/Dark dashboard.
 
 Still open:
 - broader all-important-screen physical-device Light/Dark review.
@@ -209,6 +212,17 @@ Gate #21 adds a separate required StoreKit lane:
 - exercises the exact Lifetime product and real production entitlement path.
 - remains independent of App Store Connect credentials, sandbox accounts and TestFlight.
 
+Gate #22 adds a guarded manual TestFlight release lane without weakening required CI:
+- `.github/workflows/testflight.yml` is `workflow_dispatch`-only; no push, pull-request or schedule trigger is permitted.
+- upload is allowed only from `main` and only after typing exact confirmation `UPLOAD_KEEP_METER_0_1_0_BUILD_1`.
+- release identity is checked again before upload: bundle `de.kamilunavo.keepmeter`, version `0.1.0`, build `1`.
+- StoreKit metadata, App Store listing, localization and Release preflights run again before signing.
+- signed archive path uses Xcode 26.2, `generic/platform=iOS`, `Config/Signing.xcconfig`, Automatic Signing and team `TKG684N5GL`.
+- App Store Connect export is locked to `app-store-connect` / `upload`, with `manageAppVersionAndBuildNumber = false`.
+- temporary ASC private key cleanup is always-run.
+- `ci/testflight-workflow-preflight.py` is required by normal CI and rejects automatic triggers or weakened safeguards.
+- normal CI only validates the upload workflow statically; it does not execute the TestFlight workflow, sign an archive or upload a build.
+
 ## Website / public release pages
 
 Kamilunavo website source merge `afd809da2f814625b1cf45f6920c958897fb5398` added:
@@ -240,7 +254,16 @@ Gate #20 merged and verifies:
 - `docs/SIGNING_ARCHIVE_HANDOFF.md` with the future signed archive/export pattern and explicit credential boundary.
 - complete metadata + runtime + screenshot + Release QA remained green on workflow `32276400054` before merge.
 
-Gate #20 intentionally does not add credentials, certificates, provisioning profiles, a signed archive or a TestFlight upload.
+Gate #22 merged and verifies:
+- a manual-only `.github/workflows/testflight.yml` with explicit main/build confirmation guard.
+- exact `0.1.0 (1)` archive identity must match before export/upload.
+- KeepMeter-local ASC secrets are required only at intentional dispatch time.
+- archive and export both use App Store Connect key authentication and provisioning updates.
+- export explicitly disables Apple build-number management.
+- `ci/testflight-workflow-preflight.py` is part of required normal CI and passed in workflow `32287632445`.
+- full normal runtime/Release job `96180829650` and required StoreKit job `96180829076` passed before PR #27 merged.
+
+Gate #22 intentionally did not add ASC secrets, create an App Store Connect app/IAP, produce a signed archive or upload to TestFlight.
 
 ## Verified gates
 
@@ -251,6 +274,7 @@ Gate #20 intentionally does not add credentials, certificates, provisioning prof
 19. PR #18 — App Store/IAP/listing/privacy handoff on Gate #19 arm64 base — workflow `32258911074` — merge `85160a6e66774bdbd1128fa066abc5bd66371d52` — GREEN; artifact `9367666345` manually inspected.
 20. PR #20 — Apple team/signing/archive preflight + same-device CoreSimulator lifecycle hardening — workflow `32276400054` — merge `4d63db7d32ec24ffd4beb59e506369e2c25ba2c1` — GREEN; artifact `9374353233` manually inspected.
 21. PR #24 + PR #25 — iOS Simulator StoreKitTest Lifetime entitlement proof + promotion to required CI. PR #24 fixed the asynchronous entitlement-propagation race and passed experimental StoreKit job `96167793044` in workflow `32283455910`, then merged as `e3c0bf0dea731e31a36a906b9431c0df6044f52f`. PR #25 removed `continue-on-error`, renamed the job to required `StoreKit entitlement XCTest`, and workflow `32284909516` passed both the required StoreKit job `96172034950` and full normal build job `96172035320`; StoreKit result: 1 test, 0 failures, `TEST SUCCEEDED`; merge `222464d21c888fdae5d01b07b6569a76ca2749a7` — GREEN. Historical PR #23 is not treated as Gate #21 proof because it merged while the experimental StoreKit job was still allowed to fail.
+22. PR #27 — guarded manual signed Archive/TestFlight lane + required static workflow-safety preflight — workflow `32287632445` — StoreKit job `96180829076` GREEN, full normal build/runtime/Release job `96180829650` GREEN, runtime artifact `9378499165` — merge `8828fc2f706d2dec44ea48536d4928026aaa9d75` — GREEN. No TestFlight workflow dispatch or upload occurred.
 
 Major product/source/design passes must remain CI-green before merge/TestFlight.
 
@@ -269,12 +293,14 @@ DONE / automated:
 - exact DE/EN App Store listing source and field-limit checks.
 - App Privacy handoff.
 - Apple team `TKG684N5GL`, Automatic Signing and Release archive scheme locked by CI.
+- guarded manual TestFlight upload workflow prepared and CI-locked against automatic triggering or build-number drift.
 
 OPEN:
 - live verification/deployment of public support/privacy URLs.
 - App Store Connect app record + Lifetime IAP creation/configuration.
+- KeepMeter repository ASC secret provisioning.
 - physical-device persistence/notification/VoiceOver/Dynamic Type checks.
-- signed Release Archive.
+- first signed Release Archive.
 - first TestFlight upload.
 - sandbox/TestFlight Lifetime Pro purchase + entitlement + explicit restore.
 
@@ -284,7 +310,7 @@ No TestFlight build has been uploaded yet.
 
 1. Verify/deploy public KeepMeter privacy/support pages when authenticated server deployment access is available.
 2. Create/configure the App Store Connect app record and Lifetime IAP when authenticated Apple-side access is available.
-3. Perform physical-device notification/persistence/accessibility gates.
-4. Create the first signed Release Archive only after the Apple-side prerequisites are ready.
-5. Upload the first TestFlight build only when the remaining device/IAP gates justify consuming the first build number.
+3. Provision `ASC_ISSUER_ID`, `ASC_KEY_ID`, `ASC_PRIVATE_KEY_B64` in the KeepMeter repository only when the Apple-side record is ready.
+4. Perform physical-device notification/persistence/accessibility gates.
+5. When steps 1–4 are ready, manually dispatch `KeepMeter TestFlight` from `main` with confirmation `UPLOAD_KEEP_METER_0_1_0_BUILD_1`; that single run creates the signed Release Archive and uploads exact build `0.1.0 (1)`.
 6. Validate the real sandbox/TestFlight Lifetime Pro purchase, entitlement and explicit Restore Purchases path before App Store submission.
