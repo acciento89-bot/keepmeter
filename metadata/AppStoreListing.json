@@ -1,0 +1,16 @@
+{
+  "de-DE": {
+    "name": "KeepMeter",
+    "subtitle": "Behalten oder zurückgeben?",
+    "promotionalText": "Tracke echte Nutzung, behalte Rückgabefristen im Blick und entscheide bewusster, welche Käufe wirklich bleiben sollen.",
+    "keywords": "kauf,rückgabe,rückgabefrist,shopping,kosten,nutzung,entscheidung,tracker,behalten,retoure",
+    "description": "Manche Käufe fühlen sich im Moment richtig an – und liegen kurze Zeit später unbenutzt herum. KeepMeter hilft dir, vor Ablauf der von dir eingetragenen Rückgabefrist bewusster zu entscheiden.\n\nFüge einen Kauf hinzu, tracke mit einem Tippen jede echte Nutzung und beobachte, wie sich die Kosten pro Nutzung entwickeln. KeepMeter kombiniert deine Nutzungsdaten mit der verbleibenden Zeit und zeigt dir ein nachvollziehbares Signal zum Behalten, Prüfen oder Zurückgeben.\n\nFunktionen in Version 1:\n- Rückgabefristen für aktive Käufe im Blick behalten\n- Nutzungen mit einem Tippen erfassen\n- Kosten pro Nutzung automatisch berechnen\n- nachvollziehbare BEHALTEN / PRÜFEN / ZURÜCK?-Signale\n- lokale Erinnerungen vor dem eingetragenen Rückgabedatum\n- abgeschlossene Käufe im Archiv\n- kompakte Auswertungen\n- lokale Datenspeicherung ohne Pflichtkonto\n\nKostenlos kannst du bis zu fünf aktive Käufe gleichzeitig tracken. Lifetime Pro schaltet unbegrenzt viele aktive Käufe mit einem einmaligen Kauf frei. Kein Abo.\n\nWichtig: KeepMeter verwendet das von dir eingetragene Rückgabedatum als Information für deine persönliche Entscheidung. Händlerbedingungen und gesetzliche Rechte können davon abweichen."
+  },
+  "en-US": {
+    "name": "KeepMeter",
+    "subtitle": "Keep it or return it?",
+    "promotionalText": "Track real usage, keep return deadlines visible, and make more deliberate decisions about what is actually worth keeping.",
+    "keywords": "purchase,return,deadline,shopping,cost,usage,decision,tracker,keep,returns",
+    "description": "Some purchases feel right in the moment and end up barely used a short time later. KeepMeter helps you make a more deliberate decision before the return date you entered runs out.\n\nAdd a purchase, log every real use with one tap, and see how its cost per use develops. KeepMeter combines your usage with the remaining time and gives you an explainable signal to keep, review, or reconsider the purchase.\n\nVersion 1 includes:\n- return-deadline tracking for active purchases\n- one-tap usage logging\n- automatic cost-per-use calculation\n- explainable KEEP / REVIEW / RETURN? signals\n- local reminders before the return date you entered\n- archive for completed decisions\n- lightweight insights\n- local-first storage with no required account\n\nThe free version supports up to five active purchases at once. Lifetime Pro unlocks unlimited active purchases with a one-time purchase. No subscription.\n\nImportant: KeepMeter treats the return date you enter as information for your personal decision. Merchant policies and legal rights can differ."
+  }
+}
