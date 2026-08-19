@@ -29,6 +29,32 @@ final class KeepMeterStoreKitTests: XCTestCase {
     }
 
     @MainActor
+    private func waitForEntitlement(
+        _ expected: Bool,
+        in store: EntitlementStore,
+        attempts: Int = 50
+    ) async -> Bool {
+        for _ in 0..<attempts {
+            // An externally-created StoreKitTest transaction arrives asynchronously.
+            // Give Transaction.updates a chance to grant access first, then also
+            // exercise the production recovery path via currentEntitlements.
+            if store.isPro == expected {
+                return true
+            }
+
+            await store.refreshEntitlements()
+            if store.isPro == expected {
+                return true
+            }
+
+            try? await Task.sleep(nanoseconds: 100_000_000)
+        }
+
+        await store.refreshEntitlements()
+        return store.isPro == expected
+    }
+
+    @MainActor
     func testLifetimePurchaseUnlocksAndRecoversAcrossStoreRecreation() async throws {
         let store = EntitlementStore()
         await store.refreshEntitlements()
@@ -44,26 +70,30 @@ final class KeepMeterStoreKitTests: XCTestCase {
             "StoreKitTest returned a transaction for the wrong product"
         )
 
-        await store.refreshEntitlements()
+        let unlocked = await waitForEntitlement(true, in: store)
         XCTAssertTrue(
-            store.isPro,
-            "Lifetime Pro must unlock from Transaction.currentEntitlements"
+            unlocked,
+            "Lifetime Pro must unlock after the external StoreKitTest transaction propagates through Transaction.updates/currentEntitlements"
         )
 
         let recreatedStore = EntitlementStore()
-        await recreatedStore.refreshEntitlements()
+        let recovered = await waitForEntitlement(true, in: recreatedStore)
         XCTAssertTrue(
-            recreatedStore.isPro,
+            recovered,
             "A newly-created EntitlementStore must recover the Lifetime entitlement without a fake Pro flag or manual sync"
         )
 
         session.clearTransactions()
-        await store.refreshEntitlements()
-        await recreatedStore.refreshEntitlements()
 
-        XCTAssertFalse(store.isPro, "Removing the StoreKit test transaction must remove Pro")
-        XCTAssertFalse(
-            recreatedStore.isPro,
+        let removedFromOriginalStore = await waitForEntitlement(false, in: store)
+        XCTAssertTrue(
+            removedFromOriginalStore,
+            "Removing the StoreKit test transaction must remove Pro"
+        )
+
+        let removedFromRecreatedStore = await waitForEntitlement(false, in: recreatedStore)
+        XCTAssertTrue(
+            removedFromRecreatedStore,
             "Removing the StoreKit test transaction must remove the recovered Pro entitlement"
         )
     }
