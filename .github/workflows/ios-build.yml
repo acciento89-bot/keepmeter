@@ -27,6 +27,22 @@ jobs:
       - name: Validate App Store release settings
         run: bash ci/release-preflight.sh
 
+      - name: Validate EN/DE localization integrity
+        run: python3 ci/localization-preflight.py
+
+      - name: Exercise product decision rules
+        run: |
+          set -euo pipefail
+          xcrun --sdk macosx swiftc \
+            -parse-as-library \
+            KeepMeter/Models/Purchase.swift \
+            KeepMeter/Models/UsageEvent.swift \
+            KeepMeter/Services/DecisionEngine.swift \
+            ci/ProductRulesSmoke.swift \
+            -framework SwiftData \
+            -o /tmp/keepmeter-product-rules-smoke
+          /tmp/keepmeter-product-rules-smoke
+
       - name: Exercise SwiftData persistence reopen
         run: |
           set -euo pipefail
