@@ -48,3 +48,19 @@ jobs:
 
       - name: Build unsigned release App Bundle
         run: gradle -p android bundleRelease --stacktrace
+
+      - name: Verify release identity
+        run: |
+          test -f android/app/build/outputs/bundle/release/app-release.aab
+          grep -q 'applicationId = "de.kamilunavo.keepmeter"' android/app/build.gradle.kts
+          grep -q 'targetSdk = 36' android/app/build.gradle.kts
+          grep -q 'versionCode = 1' android/app/build.gradle.kts
+          grep -q 'versionName = "1.0.0"' android/app/build.gradle.kts
+
+      - name: Upload unsigned release bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: KeepMeter-unsigned-release-aab
+          path: android/app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+          retention-days: 7
