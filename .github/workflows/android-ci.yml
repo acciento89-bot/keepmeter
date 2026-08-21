@@ -22,33 +22,25 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
-
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
-
       - name: Install Android 16 SDK
         run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
-
       - name: Set up Gradle 9.5
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.5.0'
-
       - name: Unit tests
         run: gradle -p android testDebugUnitTest --stacktrace
-
       - name: Build debug App Bundle
         run: gradle -p android bundleDebug --stacktrace
-
       - name: Build unsigned release App Bundle
         run: gradle -p android bundleRelease --stacktrace
-
       - name: Verify release identity and launcher icon
         run: |
           test -f android/app/build/outputs/bundle/release/app-release.aab
@@ -57,9 +49,10 @@ jobs:
           grep -q 'versionCode = 2' android/app/build.gradle.kts
           grep -q 'versionName = "1.0.1"' android/app/build.gradle.kts
           grep -q 'android:icon="@mipmap/ic_launcher"' android/app/src/main/AndroidManifest.xml
-          test -f android/app/src/main/res/mipmap-nodpi/ic_launcher.png
+          grep -q 'generateLauncherIcon' android/app/build.gradle.kts
+          test -f android/app/build/generated/launcherIcon/res/mipmap-nodpi/ic_launcher.png
+          test -f android/app/build/generated/launcherIcon/res/drawable-nodpi/app_icon_source.png
           test -f android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
-
       - name: Upload unsigned release bundle
         uses: actions/upload-artifact@v4
         with:
