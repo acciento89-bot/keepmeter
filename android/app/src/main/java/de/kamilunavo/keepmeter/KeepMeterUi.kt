@@ -97,7 +97,7 @@ internal fun KeepMeterRoot(activity: Activity, vm: KeepMeterViewModel, billing: 
     var onboardingDone by rememberSaveable { mutableStateOf(prefs.getBoolean("onboarding_done", false)) }
     val configuration = LocalConfiguration.current
     val copy = remember(configuration.locales) { Copy(configuration.locales[0]?.language == "de") }
-    MaterialTheme(KmColors, KmTypography) {
+    MaterialTheme(colorScheme = KmColors, typography = KmTypography) {
         Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Page, Blue.copy(alpha = .045f), Page), Offset.Zero, Offset(1100f, 1900f)))) {
             if (!onboardingDone) Onboarding(copy) { prefs.edit().putBoolean("onboarding_done", true).apply(); onboardingDone = true }
             else MainExperience(activity, vm, billing, copy) { prefs.edit().putBoolean("onboarding_done", false).apply(); onboardingDone = false }
