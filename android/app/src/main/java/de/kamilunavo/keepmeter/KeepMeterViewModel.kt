@@ -34,6 +34,7 @@ class KeepMeterViewModel(application: Application) : AndroidViewModel(applicatio
         name: String,
         merchant: String,
         price: Double,
+        purchaseDateEpochMillis: Long,
         returnDeadlineEpochMillis: Long,
         isPro: Boolean,
         onResult: (Boolean) -> Unit,
@@ -45,12 +46,11 @@ class KeepMeterViewModel(application: Application) : AndroidViewModel(applicatio
                 return@launch
             }
 
-            val now = System.currentTimeMillis()
             val id = repository.addPurchase(
                 name = name,
                 merchant = merchant,
                 price = price,
-                purchaseDateEpochMillis = now,
+                purchaseDateEpochMillis = purchaseDateEpochMillis,
                 returnDeadlineEpochMillis = returnDeadlineEpochMillis,
             )
             ReturnReminderScheduler.schedule(
