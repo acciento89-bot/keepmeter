@@ -185,6 +185,7 @@ struct SettingsView: View {
                 .listSectionSpacing(18)
             }
             .navigationTitle(String(localized: "Settings"))
+            .kmBrandedNavigation()
             .tint(KMTheme.accent)
             .sheet(isPresented: $showingPaywall) {
                 PaywallView()

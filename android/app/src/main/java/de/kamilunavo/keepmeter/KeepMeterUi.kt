@@ -62,11 +62,16 @@ private val BlueSoft = Color(0xFF64A1FF)
 private val Success = Color(0xFF22A86E)
 private val Warning = Color(0xFFF2931F)
 private val Danger = Color(0xFFEB454F)
-private val Page = Color(0xFFF4F6FB)
+private val Page = Color(0xFFF6F8FD)
 private val Surface = Color(0xFFFFFFFF)
 private val Ink = Color(0xFF151923)
 private val Secondary = Color(0xFF6C7483)
 private val Hairline = Color(0xFFE4E8F0)
+private val BrandGradient = Brush.linearGradient(
+    colors = listOf(Color(0xFF1F53CC), Blue, Color(0xFF68A5FF)),
+    start = Offset.Zero,
+    end = Offset(900f, 1900f),
+)
 
 private val KmColors = lightColorScheme(primary = Blue, onPrimary = Color.White, secondary = BlueSoft, background = Page, onBackground = Ink, surface = Surface, onSurface = Ink, surfaceVariant = Color(0xFFF0F3F9), onSurfaceVariant = Secondary, outline = Hairline, error = Danger)
 private val KmTypography = Typography(
@@ -98,7 +103,7 @@ internal fun KeepMeterRoot(activity: Activity, vm: KeepMeterViewModel, billing: 
     val configuration = LocalConfiguration.current
     val copy = remember(configuration.locales) { Copy(configuration.locales[0]?.language == "de") }
     MaterialTheme(colorScheme = KmColors, typography = KmTypography) {
-        Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Page, Blue.copy(alpha = .045f), Page), Offset.Zero, Offset(1100f, 1900f)))) {
+        Box(Modifier.fillMaxSize().background(BrandGradient)) {
             if (!onboardingDone) Onboarding(copy) { prefs.edit().putBoolean("onboarding_done", true).apply(); onboardingDone = true }
             else MainExperience(activity, vm, billing, copy) { prefs.edit().putBoolean("onboarding_done", false).apply(); onboardingDone = false }
         }
@@ -161,11 +166,19 @@ private fun MainExperience(activity: Activity, vm: KeepMeterViewModel, billing: 
 @Composable
 private fun MainShell(tab: MainTab, copy: Copy, onTab: (MainTab) -> Unit, onAdd: () -> Unit, content: @Composable () -> Unit) {
     Scaffold(containerColor = Color.Transparent, contentWindowInsets = WindowInsets.safeDrawing, topBar = {
-        Row(Modifier.fillMaxWidth().height(60.dp).padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(when(tab) { MainTab.ACTIVE -> "KeepMeter"; MainTab.INSIGHTS -> copy.insights; MainTab.ARCHIVE -> copy.archive; MainTab.SETTINGS -> copy.settings }, style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f))
-            if (tab == MainTab.ACTIVE) CircleAction(KmIcon.PLUS, copy.add, onAdd)
+        Row(Modifier.fillMaxWidth().height(104.dp).padding(horizontal = 20.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("KEEPMETER", color = Color.White.copy(alpha = .82f), fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.8.sp)
+                Text(when(tab) { MainTab.ACTIVE -> copy.t("Aktive Käufe", "Active purchases"); MainTab.INSIGHTS -> copy.insights; MainTab.ARCHIVE -> copy.archive; MainTab.SETTINGS -> copy.settings }, color = Color.White, style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(top = 3.dp))
+            }
+            if (tab == MainTab.ACTIVE) BrandCircleAction(KmIcon.PLUS, copy.add, onAdd)
         }
-    }, bottomBar = { BottomBar(tab, copy, onTab) }) { padding -> Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.TopCenter) { Box(Modifier.fillMaxWidth().widthIn(max = 720.dp)) { content() } } }
+    }, bottomBar = { BottomBar(tab, copy, onTab) }) { padding ->
+        Box(
+            Modifier.fillMaxSize().padding(padding).clip(RoundedCornerShape(topStart = 34.dp, topEnd = 34.dp)).background(Page),
+            contentAlignment = Alignment.TopCenter,
+        ) { Box(Modifier.fillMaxWidth().widthIn(max = 720.dp).padding(top = 10.dp)) { content() } }
+    }
 }
 
 @Composable
@@ -236,6 +249,16 @@ private fun DetailScreen(item: PurchaseWithUsage, vm: KeepMeterViewModel, copy: 
             }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) { MetricCard(copy.uses, decision.useCount.toString(), KmIcon.TAP, Blue, Modifier.weight(1f)); MetricCard(copy.costUse, decision.costPerUse?.let(::money) ?: "—", KmIcon.EURO, BlueSoft, Modifier.weight(1f)); MetricCard(copy.daysLeft, decision.daysRemaining.toString(), KmIcon.HOURGLASS, Warning, Modifier.weight(1f)) }
+        KmCard(Modifier.fillMaxWidth(), 20.dp) {
+            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                IconTile(KmIcon.CHART, usageTrendColor(item), 48.dp)
+                Column(Modifier.padding(start = 14.dp).weight(1f)) {
+                    Text(copy.t("Nutzungstrend", "Usage trend"), color = Secondary, style = MaterialTheme.typography.bodySmall)
+                    Text(usageTrendLabel(item, copy), color = usageTrendColor(item), style = MaterialTheme.typography.titleMedium)
+                    Text(usageTrendExplanation(item, copy), color = Secondary, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 2.dp))
+                }
+            }
+        }
         if (active) GradientButton(copy.t("Nutzung eintragen", "Log a use"), KmIcon.PLUS) { vm.recordUsage(item.purchase.id) }
         SectionTitle(copy.t("Kaufdetails", "Purchase details"))
         KmCard(Modifier.fillMaxWidth(), 20.dp) {
@@ -351,12 +374,20 @@ private fun PaywallScreen(activity: Activity, billing: BillingManager, copy: Cop
 @Composable
 private fun FullScreen(title: String, onBack: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
     Scaffold(containerColor = Color.Transparent, contentWindowInsets = WindowInsets.safeDrawing, topBar = {
-        Row(Modifier.fillMaxWidth().height(58.dp).padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = onBack, modifier = Modifier.width(64.dp)) { Text("‹", fontSize = 32.sp, fontWeight = FontWeight.Light) }
-            Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Row(Modifier.fillMaxWidth().height(104.dp).padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            TextButton(onClick = onBack, modifier = Modifier.width(64.dp)) { Text("‹", color = Color.White, fontSize = 36.sp, fontWeight = FontWeight.Light) }
+            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("KEEPMETER", color = Color.White.copy(alpha = .78f), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp)
+                Text(title, color = Color.White, style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
             Spacer(Modifier.width(64.dp))
         }
-    }) { padding -> Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).imePadding(), horizontalAlignment = Alignment.CenterHorizontally) { Column(Modifier.fillMaxWidth().widthIn(max = 680.dp).padding(horizontal = 18.dp, vertical = 12.dp).padding(bottom = 30.dp), verticalArrangement = Arrangement.spacedBy(20.dp), content = content) } }
+    }) { padding ->
+        Column(
+            Modifier.fillMaxSize().padding(padding).clip(RoundedCornerShape(topStart = 34.dp, topEnd = 34.dp)).background(Page).verticalScroll(rememberScrollState()).imePadding(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) { Column(Modifier.fillMaxWidth().widthIn(max = 680.dp).padding(horizontal = 18.dp, vertical = 22.dp).padding(bottom = 30.dp), verticalArrangement = Arrangement.spacedBy(20.dp), content = content) }
+    }
 }
 
 @Composable
@@ -375,7 +406,12 @@ private fun GradientButton(label: String, icon: KmIcon? = null, enabled: Boolean
 }
 
 @Composable
-private fun CircleAction(icon: KmIcon, label: String, onClick: () -> Unit) { Box(Modifier.size(42.dp).background(Blue.copy(alpha=.1f), CircleShape).clickable(role = Role.Button, onClick = onClick), contentAlignment = Alignment.Center) { KmSymbol(icon, Modifier.size(21.dp), Blue) } }
+private fun BrandCircleAction(icon: KmIcon, label: String, onClick: () -> Unit) {
+    Box(
+        Modifier.size(46.dp).background(Color.White.copy(alpha = .18f), CircleShape).border(1.dp, Color.White.copy(alpha = .28f), CircleShape).clickable(role = Role.Button, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) { KmSymbol(icon, Modifier.size(22.dp), Color.White) }
+}
 
 @Composable
 private fun IconTile(icon: KmIcon, tint: Color, tileSize: Dp, whiteTile: Boolean = false) { Box(Modifier.size(tileSize).background(if (whiteTile) Color.White.copy(alpha=.16f) else tint.copy(alpha=.11f), RoundedCornerShape(tileSize * .3f)), contentAlignment = Alignment.Center) { KmSymbol(icon, Modifier.size(tileSize * .48f), tint) } }
@@ -458,3 +494,29 @@ private fun money(value:Double)=NumberFormat.getCurrencyInstance().format(value)
 private fun currencySymbol()=NumberFormat.getCurrencyInstance().currency?.symbol ?: "€"
 private fun date(epoch:Long)=Instant.ofEpochMilli(epoch).atZone(ZoneId.systemDefault()).toLocalDate().format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))
 private fun returnProgress(item:PurchaseWithUsage):Double { val total=item.purchase.returnDeadlineEpochMillis-item.purchase.purchaseDateEpochMillis; if(total<=0)return 1.0; return min(1.0,max(0.0,(System.currentTimeMillis()-item.purchase.purchaseDateEpochMillis).toDouble()/total)) }
+
+private fun recentUsageCount(item: PurchaseWithUsage): Int {
+    val threshold = System.currentTimeMillis() - 7L * 86_400_000L
+    return item.usageEvents.count { it.timestampEpochMillis >= threshold }
+}
+
+private fun usageTrendLabel(item: PurchaseWithUsage, copy: Copy): String = when {
+    item.usageEvents.isEmpty() -> copy.t("noch offen", "not enough data")
+    recentUsageCount(item) >= 2 -> copy.t("steigend", "rising")
+    recentUsageCount(item) == 1 -> copy.t("stabil", "steady")
+    else -> copy.t("sinkend", "declining")
+}
+
+private fun usageTrendExplanation(item: PurchaseWithUsage, copy: Copy): String = when {
+    item.usageEvents.isEmpty() -> copy.t("Erfasse Nutzungen, damit ein Trend entsteht.", "Log uses to establish a trend.")
+    recentUsageCount(item) >= 2 -> copy.t("In den letzten sieben Tagen regelmäßig genutzt.", "Used regularly during the last seven days.")
+    recentUsageCount(item) == 1 -> copy.t("In den letzten sieben Tagen einmal genutzt.", "Used once during the last seven days.")
+    else -> copy.t("In den letzten sieben Tagen nicht genutzt.", "Not used during the last seven days.")
+}
+
+private fun usageTrendColor(item: PurchaseWithUsage): Color = when {
+    recentUsageCount(item) >= 2 -> Success
+    recentUsageCount(item) == 1 -> Blue
+    item.usageEvents.isEmpty() -> Secondary
+    else -> Warning
+}

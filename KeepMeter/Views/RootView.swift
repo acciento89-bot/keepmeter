@@ -9,6 +9,18 @@ enum KMTheme {
     static let danger = Color(red: 0.92, green: 0.27, blue: 0.31)
     static let cardRadius: CGFloat = 24
 
+    static var brandGradient: LinearGradient {
+        LinearGradient(
+            colors: [
+                Color(red: 0.12, green: 0.32, blue: 0.80),
+                accent,
+                accentSoft
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+
     static var appBackground: LinearGradient {
         LinearGradient(
             colors: [
@@ -32,12 +44,19 @@ struct KMBackground: View {
 extension View {
     func kmCard(radius: CGFloat = KMTheme.cardRadius) -> some View {
         self
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: radius, style: .continuous))
+            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: radius, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: radius, style: .continuous)
                     .strokeBorder(Color.primary.opacity(0.07), lineWidth: 0.8)
             }
             .shadow(color: Color.black.opacity(0.045), radius: 12, y: 6)
+    }
+
+    func kmBrandedNavigation() -> some View {
+        self
+            .toolbarBackground(KMTheme.accent, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
     }
 }
 

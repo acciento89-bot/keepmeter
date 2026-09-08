@@ -78,6 +78,15 @@
 "Avg. cost / use" = "Ø Kosten / Nutzung";
 "Active decisions" = "Offene Entscheidungen";
 "Your decisions" = "Deine Entscheidungen";
+"Usage trend" = "Nutzungstrend";
+"Not enough data" = "Noch offen";
+"Rising" = "Steigend";
+"Steady" = "Stabil";
+"Declining" = "Sinkend";
+"Log uses to establish a trend." = "Erfasse Nutzungen, damit ein Trend entsteht.";
+"Used regularly during the last seven days." = "In den letzten sieben Tagen regelmäßig genutzt.";
+"Used once during the last seven days." = "In den letzten sieben Tagen einmal genutzt.";
+"Not used during the last seven days." = "In den letzten sieben Tagen nicht genutzt.";
 "Best value so far" = "Bester Wert bisher";
 "Lifetime Pro unlocked" = "Lifetime Pro freigeschaltet";
 "Unlimited active purchases are enabled." = "Unbegrenzt viele aktive Käufe sind freigeschaltet.";

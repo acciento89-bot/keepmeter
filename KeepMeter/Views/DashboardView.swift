@@ -56,6 +56,7 @@ struct DashboardView: View {
                 }
             }
             .navigationTitle(String(localized: "KeepMeter"))
+            .kmBrandedNavigation()
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {

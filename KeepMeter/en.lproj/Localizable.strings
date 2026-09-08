@@ -78,6 +78,15 @@
 "Avg. cost / use" = "Avg. cost / use";
 "Active decisions" = "Active decisions";
 "Your decisions" = "Your decisions";
+"Usage trend" = "Usage trend";
+"Not enough data" = "Not enough data";
+"Rising" = "Rising";
+"Steady" = "Steady";
+"Declining" = "Declining";
+"Log uses to establish a trend." = "Log uses to establish a trend.";
+"Used regularly during the last seven days." = "Used regularly during the last seven days.";
+"Used once during the last seven days." = "Used once during the last seven days.";
+"Not used during the last seven days." = "Not used during the last seven days.";
 "Best value so far" = "Best value so far";
 "Lifetime Pro unlocked" = "Lifetime Pro unlocked";
 "Unlimited active purchases are enabled." = "Unlimited active purchases are enabled.";
