@@ -48,17 +48,17 @@ jobs:
             adb shell am start -W -n de.kamilunavo.keepmeter/.MainActivity --ez de.kamilunavo.keepmeter.STORE_SCREENSHOTS true
             sleep 6
             adb exec-out screencap -p > /tmp/keepmeter-store-screenshots/01-aktive-kaeufe.png
-            adb shell input tap 460 650
+            adb shell input tap 540 650
             sleep 2
             adb exec-out screencap -p > /tmp/keepmeter-store-screenshots/02-kosten-und-frist.png
             adb shell input keyevent 4
             sleep 1
-            adb shell input tap 345 1850
+            adb shell input tap 405 2250
             sleep 2
             adb exec-out screencap -p > /tmp/keepmeter-store-screenshots/03-auswertung.png
-            adb shell input tap 115 1850
+            adb shell input tap 135 2250
             sleep 1
-            adb shell input tap 825 120
+            adb shell input tap 970 165
             sleep 2
             adb exec-out screencap -p > /tmp/keepmeter-store-screenshots/04-kauf-hinzufuegen.png
             file /tmp/keepmeter-store-screenshots/*.png
