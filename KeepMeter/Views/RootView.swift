@@ -54,6 +54,7 @@ extension View {
 
     func kmBrandedNavigation() -> some View {
         self
+            .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(KMTheme.accent, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
@@ -64,30 +65,49 @@ struct RootView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
+    @State private var selectedTab: Int
+
+    init() {
+        #if DEBUG
+        let arguments = ProcessInfo.processInfo.arguments
+        let requestedTab = arguments
+            .first(where: { $0.hasPrefix("--keepMeterRuntimeTab=") })?
+            .split(separator: "=", maxSplits: 1)
+            .last
+            .flatMap { Int($0) } ?? 0
+        _selectedTab = State(initialValue: min(max(requestedTab, 0), 3))
+        #else
+        _selectedTab = State(initialValue: 0)
+        #endif
+    }
 
     var body: some View {
         Group {
             if hasCompletedOnboarding {
-                TabView {
+                TabView(selection: $selectedTab) {
                     DashboardView()
                         .tabItem {
                             Label(String(localized: "Active"), systemImage: "gauge.with.dots.needle.67percent")
                         }
+                        .tag(0)
 
                     InsightsView()
                         .tabItem {
                             Label(String(localized: "Insights"), systemImage: "chart.bar.xaxis")
                         }
+                        .tag(1)
 
                     ArchiveView()
                         .tabItem {
                             Label(String(localized: "Archive"), systemImage: "archivebox")
                         }
+                        .tag(2)
 
                     SettingsView()
                         .tabItem {
                             Label(String(localized: "Settings"), systemImage: "gearshape")
                         }
+                        .tag(3)
                 }
                 .tint(KMTheme.accent)
             } else {
@@ -166,6 +186,11 @@ struct RootView: View {
             let existingIDs = Set(purchases.map(\.id))
             let calendar = Calendar.current
             let reference = calendar.startOfDay(for: .now)
+            let usesGermanStoreData = ProcessInfo.processInfo.arguments.contains("--keepMeterStoreScreenshotSeed")
+            let headphonesName = usesGermanStoreData ? "Kopfhörer" : "Studio Headphones"
+            let headphonesMerchant = usesGermanStoreData ? "Technikladen" : "Audio Store"
+            let backpackName = usesGermanStoreData ? "Reiserucksack" : "Travel Backpack"
+            let backpackMerchant = usesGermanStoreData ? "Stadtladen" : "City Shop"
 
             if !existingIDs.contains(Self.runtimeHeadphonesID) {
                 let usageOffsets = [-6, -4, -2, -1]
@@ -176,26 +201,34 @@ struct RootView: View {
 
                 let headphones = Purchase(
                     id: Self.runtimeHeadphonesID,
-                    name: "Studio Headphones",
-                    merchant: "Audio Store",
+                    name: headphonesName,
+                    merchant: headphonesMerchant,
                     price: 349,
                     purchaseDate: calendar.date(byAdding: .day, value: -7, to: reference) ?? reference,
                     returnDeadline: calendar.date(byAdding: .day, value: 7, to: reference) ?? reference,
                     usageEvents: events
                 )
                 modelContext.insert(headphones)
+            } else if usesGermanStoreData,
+                      let headphones = purchases.first(where: { $0.id == Self.runtimeHeadphonesID }) {
+                headphones.name = headphonesName
+                headphones.merchant = headphonesMerchant
             }
 
             if !existingIDs.contains(Self.runtimeBackpackID) {
                 let backpack = Purchase(
                     id: Self.runtimeBackpackID,
-                    name: "Travel Backpack",
-                    merchant: "City Shop",
+                    name: backpackName,
+                    merchant: backpackMerchant,
                     price: 149,
                     purchaseDate: calendar.date(byAdding: .day, value: -10, to: reference) ?? reference,
                     returnDeadline: calendar.date(byAdding: .day, value: 2, to: reference) ?? reference
                 )
                 modelContext.insert(backpack)
+            } else if usesGermanStoreData,
+                      let backpack = purchases.first(where: { $0.id == Self.runtimeBackpackID }) {
+                backpack.name = backpackName
+                backpack.merchant = backpackMerchant
             }
 
             try modelContext.save()

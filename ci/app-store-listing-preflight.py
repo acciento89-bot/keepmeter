@@ -9,6 +9,7 @@ LIMITS = {
     "subtitle": 30,
     "promotionalText": 170,
     "description": 4000,
+    "whatsNew": 4000,
 }
 
 

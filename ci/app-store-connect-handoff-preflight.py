@@ -26,8 +26,8 @@ require(app["sku"] == "keepmeter-ios-001", "ASC SKU drifted; SKU is immutable af
 require(bool(re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", app["sku"])), "ASC SKU contains unsupported characters")
 require(app["primaryCategory"] == "Utilities", "ASC primary category drifted")
 require(app["basePrice"] == "Free", "KeepMeter v1 app binary must remain free; monetization is Lifetime Pro IAP")
-require(app["marketingVersion"] == "0.1.0", "ASC marketing version drifted")
-require(app["buildNumber"] == "1", "ASC first build number drifted")
+require(app["marketingVersion"] == "1.0.3", "ASC marketing version drifted")
+require(app["buildNumber"] == "4", "ASC update build number drifted")
 
 locales = setup["localizations"]
 require(locales == ["de-DE", "en-US"], "ASC localization order/content drifted")
@@ -69,7 +69,7 @@ testflight = setup["testFlight"]
 require(testflight["workflow"] == ".github/workflows/testflight.yml", "TestFlight workflow path drifted")
 require(testflight["manualOnly"] is True, "TestFlight lane must remain manual-only")
 require(testflight["requiredBranch"] == "main", "TestFlight lane must remain main-only")
-require(testflight["confirmation"] == "UPLOAD_KEEP_METER_0_1_0_BUILD_1", "TestFlight confirmation/build identity drifted")
+require(testflight["confirmation"] == "UPLOAD_KEEP_METER_1_0_3_BUILD_4", "TestFlight confirmation/build identity drifted")
 require(testflight["manageAppVersionAndBuildNumber"] is False, "Apple build-number management must remain disabled")
 require(
     testflight["requiredSecrets"] == ["ASC_ISSUER_ID", "ASC_KEY_ID", "ASC_PRIVATE_KEY_B64"],
@@ -85,4 +85,4 @@ print("✓ DE/EN listing locales match the machine-readable App Store listing")
 print("✓ Privacy/support URLs and final-binary privacy recheck are locked")
 print("✓ Lifetime Pro identity, pricing decision and App Review handoff are locked")
 print("✓ EU DSA status remains an explicit Apple-account verification gate")
-print("✓ TestFlight handoff matches the guarded 0.1.0 (1) upload lane")
+print("✓ TestFlight handoff matches the guarded 1.0.3 (4) update lane")

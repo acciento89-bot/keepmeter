@@ -14,7 +14,7 @@ for forbidden in ('\n  push:', '\n  pull_request:', '\n  schedule:'):
 
 required = (
     'workflow_dispatch:',
-    'UPLOAD_KEEP_METER_0_1_0_BUILD_1',
+    'UPLOAD_KEEP_METER_1_0_3_BUILD_4',
     'test "$GITHUB_REF" = "refs/heads/main"',
     'runs-on: macos-26',
     'sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer',
@@ -35,8 +35,8 @@ required = (
     '-authenticationKeyIssuerID "$ASC_ISSUER_ID"',
     'codesign --verify --deep --strict --verbose=2 "$APP"',
     'test "$BUNDLE_ID" = "de.kamilunavo.keepmeter"',
-    'test "$VERSION" = "0.1.0"',
-    'test "$BUILD" = "1"',
+    'test "$VERSION" = "1.0.3"',
+    'test "$BUILD" = "4"',
     '<string>app-store-connect</string>',
     '<string>upload</string>',
     '<string>automatic</string>',
@@ -76,7 +76,7 @@ if text.count('-authenticationKeyIssuerID "$ASC_ISSUER_ID"') < 2:
     raise SystemExit('ASC issuer ID must be supplied to both archive and export')
 
 print('✓ TestFlight workflow is workflow_dispatch-only')
-print('✓ Upload is locked to main and explicit KeepMeter 0.1.0 (1) confirmation')
+print('✓ Upload is locked to main and explicit KeepMeter 1.0.3 (4) confirmation')
 print('✓ Exact bundle/version/build identity is verified before upload')
 print('✓ App Store Connect credentials and Automatic Signing path are pinned')
 print('✓ App Store Connect is forbidden from auto-changing the build number')

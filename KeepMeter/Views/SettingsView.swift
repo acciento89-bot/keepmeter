@@ -43,7 +43,8 @@ struct SettingsView: View {
                     }
 
 #if DEBUG
-                    Section("StoreKit QA") {
+                    if !isCapturingStoreScreenshot {
+                        Section("StoreKit QA") {
                         LabeledContent("Product ID", value: EntitlementStore.lifetimeProductID)
 
                         LabeledContent("Product") {
@@ -88,6 +89,7 @@ struct SettingsView: View {
                         )
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                        }
                     }
 #endif
 
@@ -202,6 +204,12 @@ struct SettingsView: View {
             }
         }
     }
+
+#if DEBUG
+    private var isCapturingStoreScreenshot: Bool {
+        ProcessInfo.processInfo.arguments.contains("--keepMeterStoreScreenshot")
+    }
+#endif
 
     private var proCard: some View {
         Button {
