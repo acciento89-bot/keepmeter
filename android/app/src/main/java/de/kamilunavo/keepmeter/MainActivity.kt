@@ -7,6 +7,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.runtime.LaunchedEffect
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -14,6 +15,11 @@ class MainActivity : ComponentActivity() {
         val storeScreenshotMode = BuildConfig.DEBUG &&
             intent.getBooleanExtra("de.kamilunavo.keepmeter.STORE_SCREENSHOTS", false)
         if (storeScreenshotMode) {
+            Locale.setDefault(Locale.GERMANY)
+            val germanConfiguration = resources.configuration
+            germanConfiguration.setLocale(Locale.GERMANY)
+            @Suppress("DEPRECATION")
+            resources.updateConfiguration(germanConfiguration, resources.displayMetrics)
             getSharedPreferences("keepmeter", MODE_PRIVATE)
                 .edit()
                 .putBoolean("onboarding_done", true)
