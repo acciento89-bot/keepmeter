@@ -88,5 +88,25 @@ class KeepMeterViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
+    /** Populates deterministic, real app data for Play Store captures in debug builds only. */
+    fun seedStoreScreenshotData() {
+        if (!BuildConfig.DEBUG) return
+        viewModelScope.launch {
+            if (repository.activeCount() > 0) return@launch
+            val now = System.currentTimeMillis()
+            val day = 24L * 60L * 60L * 1_000L
+            val id = repository.addPurchase(
+                name = "Kopfhörer",
+                merchant = "TechStore",
+                price = 179.0,
+                purchaseDateEpochMillis = now - (5L * day),
+                returnDeadlineEpochMillis = now + (9L * day),
+            )
+            repeat(7) { index ->
+                repository.recordUsage(id, now - ((6L - index) * day))
+            }
+        }
+    }
+
     fun decision(item: PurchaseWithUsage) = DecisionEngine.evaluate(item.toDecisionSnapshot())
 }
