@@ -381,7 +381,10 @@ private fun PaywallScreen(activity: Activity, billing: BillingManager, copy: Cop
 @Composable
 private fun FullScreen(title: String, onBack: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
     Scaffold(containerColor = Color.Transparent, contentWindowInsets = WindowInsets.safeDrawing, topBar = {
-        Row(Modifier.fillMaxWidth().statusBarsPadding().height(104.dp).padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            Modifier.fillMaxWidth().height(132.dp).padding(start = 10.dp, top = 28.dp, end = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             TextButton(onClick = onBack, modifier = Modifier.width(64.dp)) { Text("‹", color = Color.White, fontSize = 36.sp, fontWeight = FontWeight.Light) }
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("KEEPMETER", color = Color.White.copy(alpha = .78f), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp)
