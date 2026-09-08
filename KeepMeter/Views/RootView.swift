@@ -54,6 +54,7 @@ extension View {
 
     func kmBrandedNavigation() -> some View {
         self
+            .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(KMTheme.accent, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
@@ -185,6 +186,11 @@ struct RootView: View {
             let existingIDs = Set(purchases.map(\.id))
             let calendar = Calendar.current
             let reference = calendar.startOfDay(for: .now)
+            let usesGermanStoreData = ProcessInfo.processInfo.arguments.contains("--keepMeterStoreScreenshotSeed")
+            let headphonesName = usesGermanStoreData ? "Kopfhörer" : "Studio Headphones"
+            let headphonesMerchant = usesGermanStoreData ? "Technikladen" : "Audio Store"
+            let backpackName = usesGermanStoreData ? "Reiserucksack" : "Travel Backpack"
+            let backpackMerchant = usesGermanStoreData ? "Stadtladen" : "City Shop"
 
             if !existingIDs.contains(Self.runtimeHeadphonesID) {
                 let usageOffsets = [-6, -4, -2, -1]
@@ -195,26 +201,34 @@ struct RootView: View {
 
                 let headphones = Purchase(
                     id: Self.runtimeHeadphonesID,
-                    name: "Studio Headphones",
-                    merchant: "Audio Store",
+                    name: headphonesName,
+                    merchant: headphonesMerchant,
                     price: 349,
                     purchaseDate: calendar.date(byAdding: .day, value: -7, to: reference) ?? reference,
                     returnDeadline: calendar.date(byAdding: .day, value: 7, to: reference) ?? reference,
                     usageEvents: events
                 )
                 modelContext.insert(headphones)
+            } else if usesGermanStoreData,
+                      let headphones = purchases.first(where: { $0.id == Self.runtimeHeadphonesID }) {
+                headphones.name = headphonesName
+                headphones.merchant = headphonesMerchant
             }
 
             if !existingIDs.contains(Self.runtimeBackpackID) {
                 let backpack = Purchase(
                     id: Self.runtimeBackpackID,
-                    name: "Travel Backpack",
-                    merchant: "City Shop",
+                    name: backpackName,
+                    merchant: backpackMerchant,
                     price: 149,
                     purchaseDate: calendar.date(byAdding: .day, value: -10, to: reference) ?? reference,
                     returnDeadline: calendar.date(byAdding: .day, value: 2, to: reference) ?? reference
                 )
                 modelContext.insert(backpack)
+            } else if usesGermanStoreData,
+                      let backpack = purchases.first(where: { $0.id == Self.runtimeBackpackID }) {
+                backpack.name = backpackName
+                backpack.merchant = backpackMerchant
             }
 
             try modelContext.save()

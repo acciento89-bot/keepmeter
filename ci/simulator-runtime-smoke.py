@@ -420,7 +420,7 @@ def main() -> int:
             "de_DE",
             onboarding=True,
             terminate=True,
-            extra_arguments=["--keepMeterRuntimeTab=0"],
+            extra_arguments=["--keepMeterRuntimeSeed", "--keepMeterStoreScreenshotSeed", "--keepMeterRuntimeTab=0"],
         )
         time.sleep(5)
         screenshot(udid, "store-01-aktive-kaeufe-de-light.png")
@@ -442,7 +442,7 @@ def main() -> int:
             "de_DE",
             onboarding=True,
             terminate=True,
-            extra_arguments=["--keepMeterRuntimeTab=3"],
+            extra_arguments=["--keepMeterStoreScreenshot", "--keepMeterRuntimeTab=3"],
         )
         time.sleep(5)
         screenshot(udid, "store-03-einstellungen-de-light.png")

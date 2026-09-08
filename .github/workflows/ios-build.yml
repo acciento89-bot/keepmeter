@@ -124,6 +124,8 @@ jobs:
             "keepMeterRuntimeSeed"
             "keepMeterRuntimeProbe"
             "keepMeterRuntimeTab"
+            "keepMeterStoreScreenshot"
+            "keepMeterStoreScreenshotSeed"
             "keepmeter-runtime-persistence-ok.txt"
             "Studio Headphones"
             "Travel Backpack"
