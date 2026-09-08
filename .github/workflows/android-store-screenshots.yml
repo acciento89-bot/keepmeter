@@ -26,6 +26,11 @@ jobs:
           gradle-version: '9.5.0'
       - name: Build screenshot APK
         run: gradle -p android assembleDebug --stacktrace
+      - name: Enable emulator acceleration
+        run: |
+          if [ -e /dev/kvm ]; then
+            sudo chmod 666 /dev/kvm
+          fi
       - name: Capture real German app screens
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -35,7 +40,7 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
           disable-animations: true
           script: |
-            set -euo pipefail
+            set -eu
             mkdir -p /tmp/keepmeter-store-screenshots
             adb install -r android/app/build/outputs/apk/debug/app-debug.apk
             adb shell settings put system system_locales de-DE
