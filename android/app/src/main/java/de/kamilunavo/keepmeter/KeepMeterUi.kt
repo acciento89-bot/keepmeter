@@ -97,11 +97,18 @@ private class Copy(private val de: Boolean) {
 }
 
 @Composable
-internal fun KeepMeterRoot(activity: Activity, vm: KeepMeterViewModel, billing: BillingManager) {
+internal fun KeepMeterRoot(
+    activity: Activity,
+    vm: KeepMeterViewModel,
+    billing: BillingManager,
+    forceGerman: Boolean = false,
+) {
     val prefs = remember { activity.getSharedPreferences("keepmeter", Context.MODE_PRIVATE) }
     var onboardingDone by rememberSaveable { mutableStateOf(prefs.getBoolean("onboarding_done", false)) }
     val configuration = LocalConfiguration.current
-    val copy = remember(configuration.locales) { Copy(configuration.locales[0]?.language == "de") }
+    val copy = remember(configuration.locales, forceGerman) {
+        Copy(forceGerman || configuration.locales[0]?.language == "de")
+    }
     MaterialTheme(colorScheme = KmColors, typography = KmTypography) {
         Box(Modifier.fillMaxSize().background(BrandGradient)) {
             if (!onboardingDone) Onboarding(copy) { prefs.edit().putBoolean("onboarding_done", true).apply(); onboardingDone = true }
@@ -166,7 +173,7 @@ private fun MainExperience(activity: Activity, vm: KeepMeterViewModel, billing: 
 @Composable
 private fun MainShell(tab: MainTab, copy: Copy, onTab: (MainTab) -> Unit, onAdd: () -> Unit, content: @Composable () -> Unit) {
     Scaffold(containerColor = Color.Transparent, contentWindowInsets = WindowInsets.safeDrawing, topBar = {
-        Row(Modifier.fillMaxWidth().height(104.dp).padding(horizontal = 20.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().statusBarsPadding().height(104.dp).padding(horizontal = 20.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("KEEPMETER", color = Color.White.copy(alpha = .82f), fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.8.sp)
                 Text(when(tab) { MainTab.ACTIVE -> copy.t("Aktive Käufe", "Active purchases"); MainTab.INSIGHTS -> copy.insights; MainTab.ARCHIVE -> copy.archive; MainTab.SETTINGS -> copy.settings }, color = Color.White, style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(top = 3.dp))
@@ -374,7 +381,10 @@ private fun PaywallScreen(activity: Activity, billing: BillingManager, copy: Cop
 @Composable
 private fun FullScreen(title: String, onBack: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
     Scaffold(containerColor = Color.Transparent, contentWindowInsets = WindowInsets.safeDrawing, topBar = {
-        Row(Modifier.fillMaxWidth().height(104.dp).padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            Modifier.fillMaxWidth().height(132.dp).padding(start = 10.dp, top = 28.dp, end = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             TextButton(onClick = onBack, modifier = Modifier.width(64.dp)) { Text("‹", color = Color.White, fontSize = 36.sp, fontWeight = FontWeight.Light) }
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("KEEPMETER", color = Color.White.copy(alpha = .78f), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp)
