@@ -31,7 +31,12 @@ class MainActivity : ComponentActivity() {
             LaunchedEffect(storeScreenshotMode) {
                 if (storeScreenshotMode) vm.seedStoreScreenshotData()
             }
-            KeepMeterRoot(activity = this, vm = vm, billing = billing)
+            KeepMeterRoot(
+                activity = this,
+                vm = vm,
+                billing = billing,
+                forceGerman = storeScreenshotMode,
+            )
         }
     }
 }
