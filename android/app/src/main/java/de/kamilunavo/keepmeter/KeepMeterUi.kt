@@ -97,11 +97,18 @@ private class Copy(private val de: Boolean) {
 }
 
 @Composable
-internal fun KeepMeterRoot(activity: Activity, vm: KeepMeterViewModel, billing: BillingManager) {
+internal fun KeepMeterRoot(
+    activity: Activity,
+    vm: KeepMeterViewModel,
+    billing: BillingManager,
+    forceGerman: Boolean = false,
+) {
     val prefs = remember { activity.getSharedPreferences("keepmeter", Context.MODE_PRIVATE) }
     var onboardingDone by rememberSaveable { mutableStateOf(prefs.getBoolean("onboarding_done", false)) }
     val configuration = LocalConfiguration.current
-    val copy = remember(configuration.locales) { Copy(configuration.locales[0]?.language == "de") }
+    val copy = remember(configuration.locales, forceGerman) {
+        Copy(forceGerman || configuration.locales[0]?.language == "de")
+    }
     MaterialTheme(colorScheme = KmColors, typography = KmTypography) {
         Box(Modifier.fillMaxSize().background(BrandGradient)) {
             if (!onboardingDone) Onboarding(copy) { prefs.edit().putBoolean("onboarding_done", true).apply(); onboardingDone = true }
