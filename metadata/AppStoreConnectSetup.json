@@ -7,8 +7,8 @@
     "sku": "keepmeter-ios-001",
     "primaryCategory": "Utilities",
     "basePrice": "Free",
-    "marketingVersion": "0.1.0",
-    "buildNumber": "1"
+    "marketingVersion": "1.0.3",
+    "buildNumber": "4"
   },
   "localizations": [
     "de-DE",
@@ -49,7 +49,7 @@
     "workflow": ".github/workflows/testflight.yml",
     "manualOnly": true,
     "requiredBranch": "main",
-    "confirmation": "UPLOAD_KEEP_METER_0_1_0_BUILD_1",
+    "confirmation": "UPLOAD_KEEP_METER_1_0_3_BUILD_4",
     "manageAppVersionAndBuildNumber": false,
     "requiredSecrets": [
       "ASC_ISSUER_ID",

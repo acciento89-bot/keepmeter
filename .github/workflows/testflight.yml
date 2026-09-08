@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       confirm_upload:
-        description: 'Type UPLOAD_KEEP_METER_0_1_0_BUILD_1 to upload KeepMeter 0.1.0 (1)'
+        description: 'Type UPLOAD_KEEP_METER_1_0_3_BUILD_4 to upload KeepMeter 1.0.3 (4)'
         required: true
         type: string
 
@@ -38,11 +38,11 @@ jobs:
             echo "::error title=TestFlight guard::Uploads are allowed only from main; got $GITHUB_REF"
             exit 1
           }
-          test "$CONFIRM_UPLOAD" = "UPLOAD_KEEP_METER_0_1_0_BUILD_1" || {
-            echo "::error title=TestFlight guard::Confirmation phrase does not match KeepMeter 0.1.0 (1)"
+          test "$CONFIRM_UPLOAD" = "UPLOAD_KEEP_METER_1_0_3_BUILD_4" || {
+            echo "::error title=TestFlight guard::Confirmation phrase does not match KeepMeter 1.0.3 (4)"
             exit 1
           }
-          echo "✓ Explicit upload confirmation accepted for KeepMeter 0.1.0 (1)"
+          echo "✓ Explicit upload confirmation accepted for KeepMeter 1.0.3 (4)"
 
       - name: Select proven Xcode toolchain
         shell: bash
@@ -113,8 +113,8 @@ jobs:
           BUILD=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist")
 
           test "$BUNDLE_ID" = "de.kamilunavo.keepmeter"
-          test "$VERSION" = "0.1.0"
-          test "$BUILD" = "1"
+          test "$VERSION" = "1.0.3"
+          test "$BUILD" = "4"
 
           echo "✓ Signed archive identity = $BUNDLE_ID $VERSION ($BUILD)"
           codesign -dvv "$APP" 2>&1 | grep -E 'Identifier=|Authority=|TeamIdentifier=' || true

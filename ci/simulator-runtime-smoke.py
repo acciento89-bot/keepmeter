@@ -414,6 +414,39 @@ def main() -> int:
         time.sleep(10)
         screenshot(udid, "dashboard-populated-en-light.png")
 
+        launch(
+            udid,
+            "de",
+            "de_DE",
+            onboarding=True,
+            terminate=True,
+            extra_arguments=["--keepMeterRuntimeTab=0"],
+        )
+        time.sleep(5)
+        screenshot(udid, "store-01-aktive-kaeufe-de-light.png")
+
+        launch(
+            udid,
+            "de",
+            "de_DE",
+            onboarding=True,
+            terminate=True,
+            extra_arguments=["--keepMeterRuntimeTab=1"],
+        )
+        time.sleep(5)
+        screenshot(udid, "store-02-insights-de-light.png")
+
+        launch(
+            udid,
+            "de",
+            "de_DE",
+            onboarding=True,
+            terminate=True,
+            extra_arguments=["--keepMeterRuntimeTab=3"],
+        )
+        time.sleep(5)
+        screenshot(udid, "store-03-einstellungen-de-light.png")
+
         simctl(["ui", udid, "appearance", "dark"], timeout=20)
         remove_host_sentinels(udid, PERSISTENCE_SENTINEL)
         launch(
@@ -434,6 +467,7 @@ def main() -> int:
         print("✓ Fresh-install Light/English onboarding rendered", flush=True)
         print("✓ DEBUG-only realistic purchase data seeded into SwiftData", flush=True)
         print("✓ Populated Light/English dashboard rendered", flush=True)
+        print("✓ Three authentic German App Store screenshots rendered", flush=True)
         print("✓ Seeded purchases survived terminate/relaunch without reseeding", flush=True)
         print("✓ Persisted Dark/German dashboard rendered from an active scene", flush=True)
         print("✓ Final clean relaunch reached an active SwiftUI scene without seed/probe arguments", flush=True)

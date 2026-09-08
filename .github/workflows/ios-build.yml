@@ -123,6 +123,7 @@ jobs:
             "keepmeter-runtime-launch-ok.txt"
             "keepMeterRuntimeSeed"
             "keepMeterRuntimeProbe"
+            "keepMeterRuntimeTab"
             "keepmeter-runtime-persistence-ok.txt"
             "Studio Headphones"
             "Travel Backpack"

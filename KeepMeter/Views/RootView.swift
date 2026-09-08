@@ -64,30 +64,49 @@ struct RootView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
+    @State private var selectedTab: Int
+
+    init() {
+        #if DEBUG
+        let arguments = ProcessInfo.processInfo.arguments
+        let requestedTab = arguments
+            .first(where: { $0.hasPrefix("--keepMeterRuntimeTab=") })?
+            .split(separator: "=", maxSplits: 1)
+            .last
+            .flatMap { Int($0) } ?? 0
+        _selectedTab = State(initialValue: min(max(requestedTab, 0), 3))
+        #else
+        _selectedTab = State(initialValue: 0)
+        #endif
+    }
 
     var body: some View {
         Group {
             if hasCompletedOnboarding {
-                TabView {
+                TabView(selection: $selectedTab) {
                     DashboardView()
                         .tabItem {
                             Label(String(localized: "Active"), systemImage: "gauge.with.dots.needle.67percent")
                         }
+                        .tag(0)
 
                     InsightsView()
                         .tabItem {
                             Label(String(localized: "Insights"), systemImage: "chart.bar.xaxis")
                         }
+                        .tag(1)
 
                     ArchiveView()
                         .tabItem {
                             Label(String(localized: "Archive"), systemImage: "archivebox")
                         }
+                        .tag(2)
 
                     SettingsView()
                         .tabItem {
                             Label(String(localized: "Settings"), systemImage: "gearshape")
                         }
+                        .tag(3)
                 }
                 .tint(KMTheme.accent)
             } else {

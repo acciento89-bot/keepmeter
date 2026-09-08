@@ -49,8 +49,8 @@ assert_setting() {
 
 assert_setting CONFIGURATION Release
 assert_setting PRODUCT_BUNDLE_IDENTIFIER de.kamilunavo.keepmeter
-assert_setting MARKETING_VERSION 0.1.0
-assert_setting CURRENT_PROJECT_VERSION 1
+assert_setting MARKETING_VERSION 1.0.3
+assert_setting CURRENT_PROJECT_VERSION 4
 assert_setting GENERATE_INFOPLIST_FILE YES
 assert_setting IPHONEOS_DEPLOYMENT_TARGET 17.0
 assert_setting TARGETED_DEVICE_FAMILY 1
