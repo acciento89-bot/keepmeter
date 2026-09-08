@@ -43,23 +43,47 @@ jobs:
             set -eu
             mkdir -p /tmp/keepmeter-store-screenshots
             adb install -r android/app/build/outputs/apk/debug/app-debug.apk
-            adb shell settings put system system_locales de-DE
+            adb root
+            adb shell setprop persist.sys.locale de-DE
+            adb shell setprop persist.sys.language de
+            adb shell setprop persist.sys.country DE
+            adb shell stop
+            adb shell start
+            adb wait-for-device
+            until [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1" ]; do sleep 2; done
+            adb shell settings put global hide_error_dialogs 1
+            size="$(adb shell wm size | sed -n 's/.*: \([0-9]*\)x\([0-9]*\).*/\1 \2/p' | tail -1)"
+            set -- $size
+            width="$1"
+            height="$2"
+            tap() { adb shell input tap "$((width * $1 / 100))" "$((height * $2 / 100))"; }
+            dismiss_system_dialog() {
+              adb shell uiautomator dump /sdcard/window.xml >/dev/null 2>&1 || true
+              if adb shell cat /sdcard/window.xml 2>/dev/null | grep -Eq "isn't responding|reagiert nicht"; then
+                tap 30 57
+                sleep 2
+              fi
+            }
             adb shell am force-stop de.kamilunavo.keepmeter
-            adb shell am start -n de.kamilunavo.keepmeter/.MainActivity --ez de.kamilunavo.keepmeter.STORE_SCREENSHOTS true
-            sleep 5
+            adb shell am start -W -n de.kamilunavo.keepmeter/.MainActivity --ez de.kamilunavo.keepmeter.STORE_SCREENSHOTS true
+            sleep 6
+            dismiss_system_dialog
             adb exec-out screencap -p > /tmp/keepmeter-store-screenshots/01-aktive-kaeufe.png
-            adb shell input tap 540 650
+            tap 50 32
             sleep 2
+            dismiss_system_dialog
             adb exec-out screencap -p > /tmp/keepmeter-store-screenshots/02-kosten-und-frist.png
             adb shell input keyevent 4
             sleep 1
-            adb shell input tap 405 2250
+            tap 38 91
             sleep 2
+            dismiss_system_dialog
             adb exec-out screencap -p > /tmp/keepmeter-store-screenshots/03-auswertung.png
-            adb shell input tap 135 2250
+            tap 13 91
             sleep 1
-            adb shell input tap 970 165
+            tap 90 7
             sleep 2
+            dismiss_system_dialog
             adb exec-out screencap -p > /tmp/keepmeter-store-screenshots/04-kauf-hinzufuegen.png
             file /tmp/keepmeter-store-screenshots/*.png
       - name: Upload authentic Play Store screenshots
