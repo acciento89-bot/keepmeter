@@ -47,19 +47,26 @@ jobs:
             adb shell am force-stop de.kamilunavo.keepmeter
             adb shell am start -W -n de.kamilunavo.keepmeter/.MainActivity --ez de.kamilunavo.keepmeter.STORE_SCREENSHOTS true
             sleep 6
+            assert_keepmeter() {
+              adb shell dumpsys activity activities | grep -q 'mResumedActivity.*de.kamilunavo.keepmeter'
+            }
+            assert_keepmeter
             adb exec-out screencap -p > /tmp/keepmeter-store-screenshots/01-aktive-kaeufe.png
-            adb shell input tap 540 650
+            adb shell input tap 300 760
             sleep 2
+            assert_keepmeter
             adb exec-out screencap -p > /tmp/keepmeter-store-screenshots/02-kosten-und-frist.png
             adb shell input keyevent 4
             sleep 1
             adb shell input tap 405 2250
             sleep 2
+            assert_keepmeter
             adb exec-out screencap -p > /tmp/keepmeter-store-screenshots/03-auswertung.png
             adb shell input tap 135 2250
             sleep 1
             adb shell input tap 970 165
             sleep 2
+            assert_keepmeter
             adb exec-out screencap -p > /tmp/keepmeter-store-screenshots/04-kauf-hinzufuegen.png
             file /tmp/keepmeter-store-screenshots/*.png
       - name: Upload authentic Play Store screenshots
