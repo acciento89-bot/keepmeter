@@ -46,6 +46,8 @@ struct PurchaseDetailView: View {
                 VStack(spacing: 16) {
                     decisionHero
 
+                    usageTrendCard
+
                     if isActive {
                         useAction
                     }
@@ -68,6 +70,7 @@ struct PurchaseDetailView: View {
         }
         .navigationTitle(purchase.name)
         .navigationBarTitleDisplayMode(.inline)
+        .kmBrandedNavigation()
         .alert(
             String(localized: "Couldn't save change"),
             isPresented: Binding(
@@ -272,6 +275,77 @@ struct PurchaseDetailView: View {
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isButton)
+    }
+
+    private var recentUseCount: Int {
+        let threshold = Calendar.current.date(byAdding: .day, value: -7, to: .now) ?? .now
+        return purchase.usageEvents.filter { $0.timestamp >= threshold }.count
+    }
+
+    private var usageTrend: (label: String, detail: String, color: Color, icon: String) {
+        if purchase.usageEvents.isEmpty {
+            return (
+                String(localized: "Not enough data"),
+                String(localized: "Log uses to establish a trend."),
+                .secondary,
+                "chart.line.flattrend.xyaxis"
+            )
+        }
+        if recentUseCount >= 2 {
+            return (
+                String(localized: "Rising"),
+                String(localized: "Used regularly during the last seven days."),
+                KMTheme.success,
+                "chart.line.uptrend.xyaxis"
+            )
+        }
+        if recentUseCount == 1 {
+            return (
+                String(localized: "Steady"),
+                String(localized: "Used once during the last seven days."),
+                KMTheme.accent,
+                "chart.line.flattrend.xyaxis"
+            )
+        }
+        return (
+            String(localized: "Declining"),
+            String(localized: "Not used during the last seven days."),
+            KMTheme.warning,
+            "chart.line.downtrend.xyaxis"
+        )
+    }
+
+    private var usageTrendCard: some View {
+        let trend = usageTrend
+        return HStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(trend.color.opacity(0.11))
+                Image(systemName: trend.icon)
+                    .font(.title2.weight(.semibold))
+                    .foregroundStyle(trend.color)
+            }
+            .frame(width: 52, height: 52)
+            .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(String(localized: "Usage trend"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text(trend.label)
+                    .font(.headline)
+                    .foregroundStyle(trend.color)
+                Text(trend.detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(16)
+        .kmCard(radius: 20)
+        .accessibilityElement(children: .combine)
     }
 
     private var purchaseInformation: some View {

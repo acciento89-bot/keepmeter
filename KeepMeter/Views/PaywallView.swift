@@ -24,6 +24,7 @@ struct PaywallView: View {
             }
             .navigationTitle(String(localized: "Pro"))
             .navigationBarTitleDisplayMode(.inline)
+            .kmBrandedNavigation()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(String(localized: "Close")) {

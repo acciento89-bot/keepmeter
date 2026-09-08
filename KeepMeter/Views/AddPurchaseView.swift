@@ -93,6 +93,7 @@ struct AddPurchaseView: View {
             }
             .navigationTitle(String(localized: "New purchase"))
             .navigationBarTitleDisplayMode(.inline)
+            .kmBrandedNavigation()
             .tint(KMTheme.accent)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

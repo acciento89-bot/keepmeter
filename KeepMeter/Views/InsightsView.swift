@@ -56,6 +56,7 @@ struct InsightsView: View {
                 .scrollIndicators(.hidden)
             }
             .navigationTitle(String(localized: "Insights"))
+            .kmBrandedNavigation()
         }
     }
 

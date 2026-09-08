@@ -41,6 +41,7 @@ struct ArchiveView: View {
                 }
             }
             .navigationTitle(String(localized: "Archive"))
+            .kmBrandedNavigation()
         }
     }
 
