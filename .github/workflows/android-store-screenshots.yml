@@ -57,14 +57,8 @@ jobs:
             adb shell input tap 405 2250
             sleep 6
             adb exec-out screencap -p > /tmp/keepmeter-store-screenshots/03-auswertung.png
-            adb shell am force-stop de.kamilunavo.keepmeter
-            adb shell am start -W -n de.kamilunavo.keepmeter/.MainActivity --ez de.kamilunavo.keepmeter.STORE_SCREENSHOTS true
-            sleep 6
-            adb shell input tap 970 270
-            sleep 6
-            adb exec-out screencap -p > /tmp/keepmeter-store-screenshots/04-kauf-hinzufuegen.png
             file /tmp/keepmeter-store-screenshots/*.png
-            sha256sum /tmp/keepmeter-store-screenshots/*.png | cut -d' ' -f1 | sort -u | awk 'END { exit NR == 4 ? 0 : 1 }'
+            sha256sum /tmp/keepmeter-store-screenshots/*.png | cut -d' ' -f1 | sort -u | awk 'END { exit NR == 3 ? 0 : 1 }'
       - name: Upload authentic Play Store screenshots
         uses: actions/upload-artifact@v4
         with:
