@@ -43,14 +43,6 @@ jobs:
             set -eu
             mkdir -p /tmp/keepmeter-store-screenshots
             adb install -r android/app/build/outputs/apk/debug/app-debug.apk
-            adb root
-            adb shell setprop persist.sys.locale de-DE
-            adb shell setprop persist.sys.language de
-            adb shell setprop persist.sys.country DE
-            adb shell stop
-            adb shell start
-            adb wait-for-device
-            until [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1" ]; do sleep 2; done
             adb shell settings put global hide_error_dialogs 1
             size="$(adb shell wm size | sed -n 's/.*: \([0-9]*\)x\([0-9]*\).*/\1 \2/p' | tail -1)"
             set -- $size
