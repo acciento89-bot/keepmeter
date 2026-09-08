@@ -49,19 +49,19 @@ jobs:
             sleep 6
             adb exec-out screencap -p > /tmp/keepmeter-store-screenshots/01-aktive-kaeufe.png
             adb shell input tap 300 850
-            sleep 2
+            sleep 6
             adb exec-out screencap -p > /tmp/keepmeter-store-screenshots/02-kosten-und-frist.png
             adb shell am force-stop de.kamilunavo.keepmeter
             adb shell am start -W -n de.kamilunavo.keepmeter/.MainActivity --ez de.kamilunavo.keepmeter.STORE_SCREENSHOTS true
             sleep 6
             adb shell input tap 405 2250
-            sleep 2
+            sleep 6
             adb exec-out screencap -p > /tmp/keepmeter-store-screenshots/03-auswertung.png
             adb shell am force-stop de.kamilunavo.keepmeter
             adb shell am start -W -n de.kamilunavo.keepmeter/.MainActivity --ez de.kamilunavo.keepmeter.STORE_SCREENSHOTS true
             sleep 6
             adb shell input tap 970 270
-            sleep 2
+            sleep 6
             adb exec-out screencap -p > /tmp/keepmeter-store-screenshots/04-kauf-hinzufuegen.png
             file /tmp/keepmeter-store-screenshots/*.png
             sha256sum /tmp/keepmeter-store-screenshots/*.png | cut -d' ' -f1 | sort -u | awk 'END { exit NR == 4 ? 0 : 1 }'
