@@ -1,0 +1,162 @@
+name: NavoOps 1.3.0 Build 5 TestFlight Bridge
+
+on:
+  push:
+    paths:
+      - '.github/workflows/navoops-testflight-bridge.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: navoops-testflight-build-5
+  cancel-in-progress: false
+
+jobs:
+  upload:
+    runs-on: macos-26
+    timeout-minutes: 45
+    env:
+      TEAM_ID: TKG684N5GL
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+      NAVOOPS_COMMIT: 2ee214a8d393738ae1f5ba83cb7614c11e81968b
+
+    steps:
+      - name: Checkout exact NavoOps release commit
+        uses: actions/checkout@v4
+        with:
+          repository: acciento89-bot/navoOps
+          ref: ${{ env.NAVOOPS_COMMIT }}
+          fetch-depth: 1
+
+      - name: Select Xcode 26.2
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
+          xcodebuild -version
+
+      - name: Install XcodeGen
+        shell: bash
+        run: brew install xcodegen
+
+      - name: Validate exact release metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          plutil -lint NavoOps/Info.plist
+          plutil -lint NavoOps/Resources/PrivacyInfo.xcprivacy
+          grep -q 'CURRENT_PROJECT_VERSION: 5' project.yml
+          grep -q 'MARKETING_VERSION: 1.3.0' project.yml
+          grep -q 'PRODUCT_BUNDLE_IDENTIFIER: com.kamilunavo.NavoOps' project.yml
+          test "$(git rev-parse HEAD)" = "$NAVOOPS_COMMIT"
+          echo 'Exact NavoOps 1.3.0 (5) release metadata validated.'
+
+      - name: Generate release project and icon
+        shell: bash
+        run: |
+          set -euo pipefail
+          /usr/bin/env -u SDKROOT -u IPHONEOS_DEPLOYMENT_TARGET -u PLATFORM_NAME -u EFFECTIVE_PLATFORM_NAME /usr/bin/xcrun --sdk macosx swift scripts/generate_app_icon.swift
+          xcodegen generate
+          test -s NavoOps/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png
+
+      - name: Require App Store Connect credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$ASC_ISSUER_ID" || { echo '::error::ASC_ISSUER_ID is missing'; exit 1; }
+          test -n "$ASC_KEY_ID" || { echo '::error::ASC_KEY_ID is missing'; exit 1; }
+          test -n "$ASC_PRIVATE_KEY_B64" || { echo '::error::ASC_PRIVATE_KEY_B64 is missing'; exit 1; }
+
+      - name: Materialize App Store Connect API key
+        shell: bash
+        run: |
+          set -euo pipefail
+          KEY_PATH="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          grep -q 'BEGIN PRIVATE KEY' "$KEY_PATH"
+
+      - name: Archive signed NavoOps Release
+        shell: bash
+        run: |
+          set -euo pipefail
+          KEY_PATH="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          rm -rf "$RUNNER_TEMP/NavoOps.xcarchive"
+          xcodebuild \
+            -project NavoOps.xcodeproj \
+            -scheme NavoOps \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/NavoOps.xcarchive" \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
+            CODE_SIGN_STYLE=Automatic \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$KEY_PATH" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            archive
+
+      - name: Verify signed archive identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP="$RUNNER_TEMP/NavoOps.xcarchive/Products/Applications/NavoOps.app"
+          test -d "$APP"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          BUNDLE_ID=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist")
+          VERSION=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist")
+          BUILD=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist")
+          test "$BUNDLE_ID" = 'com.kamilunavo.NavoOps'
+          test "$VERSION" = '1.3.0'
+          test "$BUILD" = '5'
+          echo "Signed archive identity = $BUNDLE_ID $VERSION ($BUILD)"
+          codesign -dvv "$APP" 2>&1 | grep -E 'Identifier=|Authority=|TeamIdentifier=' || true
+
+      - name: Create App Store Connect export options
+        shell: bash
+        run: |
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store-connect</string>
+            <key>destination</key>
+            <string>upload</string>
+            <key>signingStyle</key>
+            <string>automatic</string>
+            <key>teamID</key>
+            <string>$TEAM_ID</string>
+            <key>uploadSymbols</key>
+            <true/>
+            <key>manageAppVersionAndBuildNumber</key>
+            <false/>
+          </dict>
+          </plist>
+          PLIST
+          plutil -lint "$RUNNER_TEMP/ExportOptions.plist"
+
+      - name: Upload exact build to TestFlight
+        shell: bash
+        run: |
+          set -euo pipefail
+          KEY_PATH="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          rm -rf "$RUNNER_TEMP/TestFlightExport"
+          xcodebuild \
+            -exportArchive \
+            -archivePath "$RUNNER_TEMP/NavoOps.xcarchive" \
+            -exportPath "$RUNNER_TEMP/TestFlightExport" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$KEY_PATH" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+
+      - name: Remove App Store Connect API key
+        if: always()
+        shell: bash
+        run: rm -f "$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
