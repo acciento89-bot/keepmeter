@@ -53,17 +53,21 @@ jobs:
             adb shell am start -W -n de.kamilunavo.keepmeter/.MainActivity --ez de.kamilunavo.keepmeter.STORE_SCREENSHOTS true
             sleep 6
             adb exec-out screencap -p > /tmp/keepmeter-store-screenshots/01-aktive-kaeufe.png
-            adb shell input tap 300 850
-            sleep 6
-            adb exec-out screencap -p > /tmp/keepmeter-store-screenshots/02-kosten-und-frist.png
-            adb shell am force-stop de.kamilunavo.keepmeter
-            adb shell am start -W -n de.kamilunavo.keepmeter/.MainActivity --ez de.kamilunavo.keepmeter.STORE_SCREENSHOTS true
-            sleep 6
+
+            # Bottom navigation has four equal-width tabs on a 1080 px Pixel 7 profile.
+            # Tap the centre of "Auswertung" and capture the real insights screen.
             adb shell input tap 405 2250
-            sleep 6
-            adb exec-out screencap -p > /tmp/keepmeter-store-screenshots/03-auswertung.png
+            sleep 4
+            adb exec-out screencap -p > /tmp/keepmeter-store-screenshots/02-auswertung.png
+
+            # Tap the centre of "Einstellungen" for a third distinct real screen.
+            adb shell input tap 945 2250
+            sleep 4
+            adb exec-out screencap -p > /tmp/keepmeter-store-screenshots/03-einstellungen.png
+
             file /tmp/keepmeter-store-screenshots/*.png
-            sha256sum /tmp/keepmeter-store-screenshots/*.png | cut -d' ' -f1 | sort -u | awk 'END { exit NR == 3 ? 0 : 1 }'
+            count="$(sha256sum /tmp/keepmeter-store-screenshots/*.png | cut -d' ' -f1 | sort -u | wc -l | tr -d ' ')"
+            test "$count" -eq 3
       - name: Upload authentic Play Store screenshots
         uses: actions/upload-artifact@v4
         with:
@@ -78,6 +82,7 @@ jobs:
           set -euo pipefail
           target='store/google-play/screenshots/de-DE'
           mkdir -p "$target"
+          rm -f "$target"/*.png
           cp /tmp/keepmeter-store-screenshots/*.png "$target"/
           cat > store/google-play/screenshots/README.md <<'EOF'
           # Google Play screenshots
