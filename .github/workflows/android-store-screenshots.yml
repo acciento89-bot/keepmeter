@@ -53,21 +53,14 @@ jobs:
             adb shell am start -W -n de.kamilunavo.keepmeter/.MainActivity --ez de.kamilunavo.keepmeter.STORE_SCREENSHOTS true
             sleep 6
             adb exec-out screencap -p > /tmp/keepmeter-store-screenshots/01-aktive-kaeufe.png
-
-            # Bottom navigation has four equal-width tabs on a 1080 px Pixel 7 profile.
-            # Tap the centre of "Auswertung" and capture the real insights screen.
             adb shell input tap 405 2250
             sleep 4
             adb exec-out screencap -p > /tmp/keepmeter-store-screenshots/02-auswertung.png
-
-            # Tap the centre of "Einstellungen" for a third distinct real screen.
             adb shell input tap 945 2250
             sleep 4
             adb exec-out screencap -p > /tmp/keepmeter-store-screenshots/03-einstellungen.png
-
             file /tmp/keepmeter-store-screenshots/*.png
-            count="$(sha256sum /tmp/keepmeter-store-screenshots/*.png | cut -d' ' -f1 | sort -u | wc -l | tr -d ' ')"
-            test "$count" -eq 3
+            test "$(sha256sum /tmp/keepmeter-store-screenshots/*.png | cut -d' ' -f1 | sort -u | wc -l | tr -d ' ')" -eq 3
       - name: Upload authentic Play Store screenshots
         uses: actions/upload-artifact@v4
         with:
