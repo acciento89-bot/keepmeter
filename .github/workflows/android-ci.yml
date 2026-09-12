@@ -3,13 +3,16 @@ name: Android CI
 on:
   push:
     branches:
+      - main
       - 'android/**'
     paths:
       - 'android/**'
+      - 'store/google-play/**'
       - '.github/workflows/android-ci.yml'
   pull_request:
     paths:
       - 'android/**'
+      - 'store/google-play/**'
       - '.github/workflows/android-ci.yml'
   workflow_dispatch:
 
@@ -29,12 +32,36 @@ jobs:
           java-version: '17'
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
-      - name: Install Android 16 SDK
-        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Install Android 16 SDK and icon renderer
+        run: |
+          sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq librsvg2-bin
       - name: Set up Gradle 9.5
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.5.0'
+      - name: Verify launcher and Play icon source parity
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          launcher=Path('android/app/src/main/res/drawable/app_icon_source.xml').read_text()
+          colors=Path('android/app/src/main/res/values/launcher_colors.xml').read_text()
+          play=Path('store/google-play/icon.svg').read_text()
+          expected=set(re.findall(r'#[0-9A-Fa-f]{6}', launcher+colors))
+          actual=set(re.findall(r'#[0-9A-Fa-f]{6}', play))
+          if expected != actual:
+              raise SystemExit(f'KeepMeter icon colors differ: {expected} != {actual}')
+          launcher_paths=[re.sub(r'[ ,]', '', p) for p in re.findall(r'android:pathData="([^"]+)"', launcher)]
+          play_paths=[re.sub(r'[ ,]', '', p) for p in re.findall(r'<path[^>]*\bd="([^"]+)"', play)]
+          for p in launcher_paths:
+              if p not in play_paths:
+                  raise SystemExit(f'KeepMeter launcher path missing from Play icon: {p}')
+          print('KeepMeter launcher/Play icon source parity OK')
+          PY
       - name: Unit tests
         run: gradle -p android testDebugUnitTest --stacktrace
       - name: Build debug App Bundle
@@ -55,10 +82,23 @@ jobs:
           test -f android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
           grep -Fq '@drawable/app_icon_source' android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
           ! grep -Fq 'generateLauncherIcon' android/app/build.gradle.kts
-      - name: Upload unsigned release bundle
+      - name: Render canonical Play icon
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p android/play-assets
+          rsvg-convert -w 512 -h 512 store/google-play/icon.svg -o android/play-assets/icon-512.png
+          file android/play-assets/icon-512.png
+          test "$(stat -c%s android/play-assets/icon-512.png)" -lt 1048576
+          sha256sum android/play-assets/icon-512.png > android/play-assets/icon-512.png.sha256
+      - name: Upload Android review assets
         uses: actions/upload-artifact@v4
         with:
-          name: KeepMeter-unsigned-release-aab
-          path: android/app/build/outputs/bundle/release/app-release.aab
+          name: KeepMeter-1.0.3-4-android-review
+          path: |
+            android/app/build/outputs/bundle/release/app-release.aab
+            android/play-assets/icon-512.png
+            android/play-assets/icon-512.png.sha256
+            store/google-play/screenshots/de-DE/*.png
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 30
