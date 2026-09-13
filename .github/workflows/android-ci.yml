@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - 'android/**'
+      - fix/android-ios-parity-20260913
     paths:
       - 'android/**'
       - 'store/google-play/**'
@@ -24,9 +25,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -68,15 +69,19 @@ jobs:
         run: gradle -p android bundleDebug --stacktrace
       - name: Build unsigned release App Bundle
         run: gradle -p android bundleRelease --stacktrace
-      - name: Verify release identity and launcher icon
+      - name: Verify release identity, system-bar parity and launcher icon
         run: |
           set -euo pipefail
           AAB='android/app/build/outputs/bundle/release/app-release.aab'
           test -s "$AAB"
           grep -Fq 'applicationId = "de.kamilunavo.keepmeter"' android/app/build.gradle.kts
           grep -Fq 'targetSdk = 36' android/app/build.gradle.kts
-          grep -Fq 'versionCode = 4' android/app/build.gradle.kts
-          grep -Fq 'versionName = "1.0.3"' android/app/build.gradle.kts
+          grep -Fq 'versionCode = 5' android/app/build.gradle.kts
+          grep -Fq 'versionName = "1.0.4"' android/app/build.gradle.kts
+          grep -Fq 'enableEdgeToEdge' android/app/src/main/java/de/kamilunavo/keepmeter/MainActivity.kt
+          grep -Fq 'SystemBarStyle.dark' android/app/src/main/java/de/kamilunavo/keepmeter/MainActivity.kt
+          grep -Fq 'SystemBarStyle.light' android/app/src/main/java/de/kamilunavo/keepmeter/MainActivity.kt
+          grep -Fq 'WindowInsets.safeDrawing' android/app/src/main/java/de/kamilunavo/keepmeter/KeepMeterUi.kt
           grep -Fq 'android:icon="@mipmap/ic_launcher"' android/app/src/main/AndroidManifest.xml
           test -f android/app/src/main/res/drawable/app_icon_source.xml
           test -f android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
@@ -94,7 +99,7 @@ jobs:
       - name: Upload Android review assets
         uses: actions/upload-artifact@v4
         with:
-          name: KeepMeter-1.0.3-4-android-review
+          name: KeepMeter-1.0.4-5-android-review
           path: |
             android/app/build/outputs/bundle/release/app-release.aab
             android/play-assets/icon-512.png
