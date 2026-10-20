@@ -18,3 +18,7 @@ Package.resolved
 # Local secrets/config
 *.env
 .env
+
+# Local Android build state
+android/.gradle/
+android/local.properties

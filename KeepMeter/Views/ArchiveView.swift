@@ -5,6 +5,8 @@ struct ArchiveView: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Query(sort: \Purchase.archivedAt, order: .reverse) private var purchases: [Purchase]
 
+    @State private var searchText = ""
+
     private var archivedPurchases: [Purchase] {
         purchases.filter { $0.outcome != .active }
     }
@@ -29,7 +31,7 @@ struct ArchiveView: View {
                         LazyVStack(spacing: 14) {
                             archiveSummary
 
-                            ForEach(archivedPurchases) { purchase in
+                            ForEach(archivedPurchases.filter { PurchaseFilter.matches(name: $0.name, merchant: $0.merchant, category: $0.categoryRawValue, daysRemaining: 0, query: searchText, categoryFilter: "all", dueSoon: false) }) { purchase in
                                 archiveCard(purchase)
                             }
                         }
@@ -42,6 +44,7 @@ struct ArchiveView: View {
             }
             .navigationTitle(String(localized: "Archive"))
             .kmBrandedNavigation()
+            .searchable(text: $searchText, prompt: String(localized: "Search purchases or merchants"))
         }
     }
 

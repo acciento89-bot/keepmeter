@@ -52,6 +52,8 @@ struct PurchaseDetailView: View {
                         useAction
                     }
 
+                    PurchaseOrganisationView(purchase: purchase)
+
                     purchaseInformation
 
                     if !purchase.usageEvents.isEmpty {

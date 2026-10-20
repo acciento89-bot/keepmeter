@@ -35,6 +35,9 @@ jobs:
           java-version: '17'
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools'
+          log-accepted-android-sdk-licenses: false
       - name: Install Android 16 SDK and icon renderer
         run: |
           sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
@@ -66,8 +69,8 @@ jobs:
           test -s "$AAB"
           grep -Fq 'applicationId = "de.kamilunavo.keepmeter"' android/app/build.gradle.kts
           grep -Fq 'targetSdk = 36' android/app/build.gradle.kts
-          grep -Fq 'versionCode = 5' android/app/build.gradle.kts
-          grep -Fq 'versionName = "1.0.4"' android/app/build.gradle.kts
+          grep -Fq 'versionCode = 6' android/app/build.gradle.kts
+          grep -Fq 'versionName = "1.1.0"' android/app/build.gradle.kts
           grep -Fq 'enableEdgeToEdge' android/app/src/main/java/de/kamilunavo/keepmeter/MainActivity.kt
           grep -Fq 'SystemBarStyle.dark' android/app/src/main/java/de/kamilunavo/keepmeter/MainActivity.kt
           grep -Fq 'SystemBarStyle.light' android/app/src/main/java/de/kamilunavo/keepmeter/MainActivity.kt
@@ -88,7 +91,7 @@ jobs:
       - name: Upload Android review assets
         uses: actions/upload-artifact@v4
         with:
-          name: KeepMeter-1.0.4-5-android-review
+          name: KeepMeter-1.1.0-6-android-review
           path: |
             android/app/build/outputs/bundle/release/app-release.aab
             android/play-assets/icon-512.png

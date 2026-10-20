@@ -4,6 +4,17 @@ import android.Manifest
 import android.app.Activity
 import android.content.Context
 import android.os.Build
+import android.graphics.BitmapFactory
+import android.widget.Toast
+import java.io.File
+import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import de.kamilunavo.keepmeter.domain.PurchaseCSV
+import de.kamilunavo.keepmeter.domain.PurchaseFilter
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -89,6 +100,7 @@ private enum class Destination { TABS, ADD, DETAIL, PAYWALL }
 private enum class KmIcon { GAUGE, BAG, TAP, CHECK, CHART, ARCHIVE, GEAR, PLUS, HOURGLASS, EURO, RETURN, LOCK, BELL, STAR, CALENDAR, STORE }
 
 private class Copy(private val de: Boolean) {
+    val german get() = de
     fun t(german: String, english: String) = if (de) german else english
     val active = t("Aktiv", "Active"); val insights = t("Auswertung", "Insights"); val archive = t("Archiv", "Archive"); val settings = t("Einstellungen", "Settings")
     val add = t("Kauf hinzufügen", "Add purchase"); val cancel = t("Abbrechen", "Cancel"); val save = t("Speichern", "Save")
@@ -161,7 +173,7 @@ private fun MainExperience(activity: Activity, vm: KeepMeterViewModel, billing: 
                 MainTab.ACTIVE -> ActiveScreen(all.filter { it.purchase.outcome == "active" }, vm, copy, billing.isPro, onOpen = { selectedId = it; go(Destination.DETAIL) }, onPaywall = { go(Destination.PAYWALL) })
                 MainTab.INSIGHTS -> InsightsScreen(all, copy)
                 MainTab.ARCHIVE -> ArchiveScreen(all.filter { it.purchase.outcome != "active" }, copy) { selectedId = it; go(Destination.DETAIL) }
-                MainTab.SETTINGS -> SettingsScreen(activity, billing, copy, { go(Destination.PAYWALL) }, showOnboarding)
+                MainTab.SETTINGS -> SettingsScreen(activity, billing, all, copy, { go(Destination.PAYWALL) }, showOnboarding)
             }
         }
         Destination.ADD -> AddPurchaseScreen(vm, billing.isPro, copy, { go(Destination.TABS) }) { go(Destination.PAYWALL) }
@@ -203,6 +215,14 @@ private fun ActiveScreen(items: List<PurchaseWithUsage>, vm: KeepMeterViewModel,
         EmptyState(KmIcon.BAG, copy.t("Keine aktiven Käufe", "No active purchases"), copy.t("Füge einen kürzlich getätigten Kauf hinzu. KeepMeter hilft dir, rechtzeitig vor Ablauf der Rückgabefrist zu entscheiden.", "Add a recent purchase and KeepMeter will help you decide before the return window closes."))
         return
     }
+    var query by rememberSaveable { mutableStateOf("") }
+    var category by rememberSaveable { mutableStateOf("all") }
+    var dueSoon by rememberSaveable { mutableStateOf(false) }
+    var sort by rememberSaveable { mutableStateOf("deadline") }
+    val filtered = items.filter { PurchaseFilter.matches(it.purchase.name, it.purchase.merchant,
+        it.purchase.category, vm.decision(it).daysRemaining, query, category, dueSoon) }.let { list ->
+        when(sort) { "price" -> list.sortedByDescending { it.purchase.price }; "name" -> list.sortedBy { it.purchase.name.lowercase() }; else -> list.sortedBy { it.purchase.returnDeadlineEpochMillis } }
+    }
     val urgent = items.count { vm.decision(it).daysRemaining <= 3 }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         KmCard(Modifier.fillMaxWidth()) {
@@ -217,7 +237,23 @@ private fun ActiveScreen(items: List<PurchaseWithUsage>, vm: KeepMeterViewModel,
         if (!isPro && items.size >= 5) KmCard(Modifier.fillMaxWidth().clickable(role = Role.Button, onClick = onPaywall), 20.dp) {
             Row(Modifier.padding(15.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(13.dp)) { IconTile(KmIcon.STAR, Blue, 42.dp); Column(Modifier.weight(1f)) { Text(copy.t("Kostenloses Limit erreicht", "Free limit reached"), fontWeight = FontWeight.Bold); Text(copy.t("Lifetime Pro schaltet unbegrenzt viele aktive Käufe frei.", "Lifetime Pro unlocks unlimited active purchases."), color = Secondary, style = MaterialTheme.typography.bodyMedium) }; Text("›", color = Secondary, fontSize = 24.sp) }
         }
-        items.forEach { PurchaseCard(it, vm, copy, onOpen) }
+        OutlinedTextField(query, { query = it }, label = { Text(copy.t("Käufe oder Händler suchen", "Search purchases or merchants")) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+        CategoryMenu(category, true, copy) { category = it }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(copy.t("Nächste 7 Rückgabetage", "Due in the next 7 days"), modifier = Modifier.weight(1f))
+            Switch(dueSoon, { dueSoon = it })
+        }
+        var sortMenu by remember { mutableStateOf(false) }
+        Box {
+            TextButton(onClick = { sortMenu = true }) { Text(copy.t("Sortieren", "Sort") + ": " + when(sort) { "price" -> copy.t("Höchster Preis", "Highest price"); "name" -> "Name"; else -> copy.t("Rückgabedatum", "Return date") }) }
+            DropdownMenu(sortMenu, { sortMenu = false }) {
+                listOf("deadline" to copy.t("Rückgabedatum", "Return date"), "price" to copy.t("Höchster Preis", "Highest price"), "name" to "Name").forEach { (key,label) ->
+                    DropdownMenuItem(text = { Text(label) }, onClick = { sort = key; sortMenu = false })
+                }
+            }
+        }
+        if (filtered.isEmpty()) Text(copy.t("Keine passenden Käufe. Passe Suche oder Filter an.", "No matching purchases. Change your search or filters."), color = Secondary)
+        filtered.forEach { PurchaseCard(it, vm, copy, onOpen) }
     }
 }
 
@@ -267,6 +303,7 @@ private fun DetailScreen(item: PurchaseWithUsage, vm: KeepMeterViewModel, copy: 
             }
         }
         if (active) GradientButton(copy.t("Nutzung eintragen", "Log a use"), KmIcon.PLUS) { vm.recordUsage(item.purchase.id) }
+        PurchaseFolder(item, vm, copy)
         SectionTitle(copy.t("Kaufdetails", "Purchase details"))
         KmCard(Modifier.fillMaxWidth(), 20.dp) {
             Column(Modifier.padding(horizontal = 16.dp)) {
@@ -337,14 +374,41 @@ private fun InsightsScreen(items: List<PurchaseWithUsage>, copy: Copy) {
 @Composable
 private fun ArchiveScreen(items: List<PurchaseWithUsage>, copy: Copy, onOpen: (String) -> Unit) {
     if (items.isEmpty()) { EmptyState(KmIcon.ARCHIVE, copy.t("Archiv ist leer", "Archive is empty"), copy.t("Käufe, die du behältst oder zurückgibst, erscheinen hier.", "Purchases you keep or return will appear here.")); return }
+    var search by rememberSaveable { mutableStateOf("") }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        OutlinedTextField(search, { search = it }, label = { Text(copy.t("Käufe oder Händler suchen", "Search purchases or merchants")) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) { CountCard(copy.kept, items.count { it.purchase.outcome == "kept" }, Success, Modifier.weight(1f)); CountCard(copy.returned, items.count { it.purchase.outcome == "returned" }, Danger, Modifier.weight(1f)) }
-        items.forEach { item -> val kept = item.purchase.outcome == "kept"; KmCard(Modifier.fillMaxWidth().clickable(role = Role.Button) { onOpen(item.purchase.id) }, 20.dp) { Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) { IconTile(if (kept) KmIcon.CHECK else KmIcon.RETURN, if (kept) Success else Danger, 48.dp); Column(Modifier.padding(start = 14.dp).weight(1f)) { Row(verticalAlignment = Alignment.CenterVertically) { Text(item.purchase.name, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f)); StatusBadge(if (kept) copy.kept else copy.returned, if (kept) Success else Danger) }; Text("${item.usageEvents.size} ${copy.uses.lowercase()}${if (item.usageEvents.isNotEmpty()) " · ${money(item.purchase.price / item.usageEvents.size)} / ${copy.t("Nutzung", "use")}" else ""}", color = Secondary, style = MaterialTheme.typography.bodyMedium) }; Text("›", color = Secondary, fontSize = 24.sp) } } }
+        items.filter { PurchaseFilter.matches(it.purchase.name, it.purchase.merchant, it.purchase.category, 0, search, "all", false) }.forEach { item -> val kept = item.purchase.outcome == "kept"; KmCard(Modifier.fillMaxWidth().clickable(role = Role.Button) { onOpen(item.purchase.id) }, 20.dp) { Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) { IconTile(if (kept) KmIcon.CHECK else KmIcon.RETURN, if (kept) Success else Danger, 48.dp); Column(Modifier.padding(start = 14.dp).weight(1f)) { Row(verticalAlignment = Alignment.CenterVertically) { Text(item.purchase.name, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f)); StatusBadge(if (kept) copy.kept else copy.returned, if (kept) Success else Danger) }; Text("${item.usageEvents.size} ${copy.uses.lowercase()}${if (item.usageEvents.isNotEmpty()) " · ${money(item.purchase.price / item.usageEvents.size)} / ${copy.t("Nutzung", "use")}" else ""}", color = Secondary, style = MaterialTheme.typography.bodyMedium) }; Text("›", color = Secondary, fontSize = 24.sp) } } }
     }
 }
 
 @Composable
-private fun SettingsScreen(activity: Activity, billing: BillingManager, copy: Copy, onPaywall: () -> Unit, showOnboarding: () -> Unit) {
+private fun SettingsScreen(activity: Activity, billing: BillingManager, items: List<PurchaseWithUsage>, copy: Copy, onPaywall: () -> Unit, showOnboarding: () -> Unit) {
+    val scope = rememberCoroutineScope()
+    // Keep only a filename in saved state; the private file survives picker/activity recreation.
+    var pendingExportFile by rememberSaveable { mutableStateOf<String?>(null) }
+    var preparingExport by remember { mutableStateOf(false) }
+    val exporter = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
+        val filename = pendingExportFile; pendingExportFile = null
+        scope.launch {
+            val success = withContext(Dispatchers.IO) {
+                val snapshot = filename?.let { File(activity.cacheDir, it) }
+                try {
+                    if (uri == null) true
+                    else {
+                        check(snapshot != null && snapshot.isFile) { "Export snapshot missing" }
+                        val stream = activity.contentResolver.openOutputStream(uri, "wt") ?: error("Missing output")
+                        stream.use { out -> snapshot.inputStream().use { it.copyTo(out) } }
+                        true
+                    }
+                } catch (_: Exception) { false }
+                finally { snapshot?.delete() }
+            }
+            if (uri != null) withContext(Dispatchers.Main.immediate) {
+                Toast.makeText(activity, if (success) copy.t("Käufe exportiert", "Purchases exported") else copy.t("Export fehlgeschlagen. Bitte erneut versuchen.", "Export failed. Please try again."), Toast.LENGTH_LONG).show()
+            }
+        }
+    }
     val notificationLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
         Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Brush.linearGradient(if (billing.isPro) listOf(Success, Color(0xFF55C68D)) else listOf(Blue, BlueSoft))).clickable(enabled = !billing.isPro, role = Role.Button, onClick = onPaywall).padding(17.dp)) {
@@ -354,9 +418,35 @@ private fun SettingsScreen(activity: Activity, billing: BillingManager, copy: Co
             SettingsLine(KmIcon.BELL, copy.t("Mitteilungen", "Notification permission"), copy.t("KeepMeter plant Erinnerungen vor der Rückgabefrist.", "KeepMeter schedules reminders before the return deadline."), Blue)
             if (Build.VERSION.SDK_INT >= 33) TextButton(onClick = { notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS) }) { Text(copy.t("Erinnerungen aktivieren", "Enable reminders"), fontWeight = FontWeight.Bold) }
         }
+        SettingsGroup(copy.t("Deine Kaufdaten", "Your purchase data")) {
+            TextButton(enabled = items.isNotEmpty() && !preparingExport, onClick = {
+                preparingExport = true
+                scope.launch {
+                    try {
+                        val formatter = DateTimeFormatter.ISO_LOCAL_DATE.withZone(ZoneId.systemDefault())
+                        val rows = items.sortedByDescending { it.purchase.createdAtEpochMillis }.map { item ->
+                            val p = item.purchase
+                            PurchaseCSV.Row(p.name, p.merchant, p.price, runCatching { java.util.Currency.getInstance(java.util.Locale.getDefault()).currencyCode }.getOrDefault("EUR"),
+                                formatter.format(Instant.ofEpochMilli(p.purchaseDateEpochMillis)), formatter.format(Instant.ofEpochMilli(p.returnDeadlineEpochMillis)),
+                                p.outcome, item.usageEvents.size, categoryLabel(p.category, copy))
+                        }
+                        pendingExportFile = withContext(Dispatchers.IO) {
+                            val snapshot = File.createTempFile("keepmeter-export-", ".csv", activity.cacheDir)
+                            try { snapshot.writeText(PurchaseCSV.encode(rows, copy.german), Charsets.UTF_8); snapshot.name }
+                            catch (e: Exception) { snapshot.delete(); throw e }
+                        }
+                        exporter.launch("KeepMeter-Purchases.csv")
+                    } catch (_: Exception) {
+                        pendingExportFile?.let { File(activity.cacheDir, it).delete() }; pendingExportFile = null
+                        Toast.makeText(activity, copy.t("Export fehlgeschlagen. Bitte erneut versuchen.", "Export failed. Please try again."), Toast.LENGTH_LONG).show()
+                    } finally { preparingExport = false }
+                }
+            }) { Text(copy.t("Käufe exportieren (CSV)", "Export purchases (CSV)")) }
+            Text(copy.t("Alle Käufe und Nutzungszahlen für Excel oder Numbers. Belegfotos sind nicht enthalten.", "All purchases and usage totals for Excel or Numbers. Receipt photos are not included."), style = MaterialTheme.typography.bodySmall, color = Secondary, modifier = Modifier.padding(bottom=14.dp))
+        }
         SettingsGroup(copy.t("Datenschutz", "Privacy")) { SettingsLine(KmIcon.LOCK, copy.t("Lokal gespeichert", "Local-first"), copy.t("Deine Kauf- und Nutzungsdaten bleiben auf diesem Gerät. Kein Konto erforderlich.", "Your purchase and usage data stays on this device. No account required."), Success) }
         SettingsGroup(copy.t("Hilfe", "Help")) { TextButton(onClick = showOnboarding) { Text(copy.t("Einführung erneut anzeigen", "Show introduction again"), fontWeight = FontWeight.Bold) }; TextButton(onClick = billing::restorePurchases) { Text(copy.t("Käufe wiederherstellen", "Restore purchases"), fontWeight = FontWeight.Bold) } }
-        SettingsGroup(copy.t("Über KeepMeter", "About KeepMeter")) { InfoRow(KmIcon.GAUGE, copy.t("Version", "Version"), "1.0.2"); HorizontalDivider(color = Hairline); InfoRow(KmIcon.STORE, copy.t("Entwickler", "Developer"), "Kamilunavo") }
+        SettingsGroup(copy.t("Über KeepMeter", "About KeepMeter")) { InfoRow(KmIcon.GAUGE, copy.t("Version", "Version"), BuildConfig.VERSION_NAME); HorizontalDivider(color = Hairline); InfoRow(KmIcon.STORE, copy.t("Entwickler", "Developer"), "Kamilunavo") }
         billing.statusMessage?.let { FormulaBox(it, true) }
     }
 }
@@ -529,4 +619,47 @@ private fun usageTrendColor(item: PurchaseWithUsage): Color = when {
     recentUsageCount(item) == 1 -> Blue
     item.usageEvents.isEmpty() -> Secondary
     else -> Warning
+}
+
+
+private val categoryKeys = listOf("other", "tech", "clothing", "home", "leisure", "gifts")
+private fun categoryLabel(key: String, copy: Copy): String = when(key) {
+    "tech" -> copy.t("Technik", "Technology"); "clothing" -> copy.t("Kleidung", "Clothing")
+    "home" -> copy.t("Zuhause", "Home"); "leisure" -> copy.t("Freizeit", "Leisure")
+    "gifts" -> copy.t("Geschenke", "Gifts"); "all" -> copy.t("Alle Kategorien", "All categories")
+    else -> copy.t("Sonstiges", "Other")
+}
+@Composable private fun CategoryMenu(value: String, all: Boolean, copy: Copy, enabled: Boolean = true, onChange: (String)->Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        OutlinedButton(onClick = { expanded = true }, enabled = enabled, modifier = Modifier.fillMaxWidth()) { Text(copy.t("Kategorie", "Category") + ": " + categoryLabel(value, copy)) }
+        DropdownMenu(expanded, { expanded = false }) {
+            (if (all) listOf("all") + categoryKeys else categoryKeys).forEach { key ->
+                DropdownMenuItem(text = { Text(categoryLabel(key, copy)) }, onClick = { onChange(key); expanded = false })
+            }
+        }
+    }
+}
+@Composable private fun PurchaseFolder(item: PurchaseWithUsage, vm: KeepMeterViewModel, copy: Copy) {
+    var busy by remember(item.purchase.id) { mutableStateOf(false) }
+    var error by remember(item.purchase.id) { mutableStateOf(false) }
+    val active = item.purchase.outcome == "active"
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) { busy = true; vm.updateReceipt(item.purchase.id, uri) { success -> busy = false; error = !success } }
+    }
+    KmCard(Modifier.fillMaxWidth(), 20.dp) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(copy.t("Kaufakte", "Purchase folder"), style = MaterialTheme.typography.titleMedium)
+            CategoryMenu(item.purchase.category, false, copy, active && !busy) { vm.updateCategory(item.purchase.id, it) { error = true } }
+            val image = remember(item.purchase.receiptPath) { item.purchase.receiptPath?.let { BitmapFactory.decodeFile(it)?.asImageBitmap() } }
+            if (image != null) {
+                Image(image, copy.t("Belegfoto", "Receipt photo"), modifier = Modifier.fillMaxWidth().heightIn(max = 340.dp), contentScale = ContentScale.Fit)
+                if (active) TextButton(enabled = !busy, onClick = { busy = true; vm.updateReceipt(item.purchase.id, null) { ok -> busy = false; error = !ok } }) { Text(copy.t("Belegfoto entfernen", "Remove receipt photo"), color = Danger) }
+            }
+            if (active) OutlinedButton(enabled = !busy, onClick = { picker.launch("image/*") }) { Text(copy.t("Belegfoto hinzufügen", "Add receipt photo")) }
+            if (busy) CircularProgressIndicator()
+            Text(copy.t("Belegfotos bleiben auf diesem Gerät. Im CSV-Export sind keine Fotos enthalten.", "Receipt photos stay on this device. CSV export does not include photos."), color=Secondary, style=MaterialTheme.typography.bodySmall)
+            if (error) Text(copy.t("Änderung konnte nicht gespeichert werden. Bitte erneut versuchen.", "Couldn't save change. Please try again."), color = Danger)
+        }
+    }
 }

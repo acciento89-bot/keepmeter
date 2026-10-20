@@ -1,12 +1,18 @@
 import SwiftUI
 import UserNotifications
 import UIKit
+import SwiftData
+import UniformTypeIdentifiers
 
 struct SettingsView: View {
     @EnvironmentObject private var entitlementStore: EntitlementStore
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = true
 
+    @Query(sort: \Purchase.createdAt, order: .reverse) private var purchases: [Purchase]
+    @State private var exportDocument = PurchaseCSVDocument(text: "")
+    @State private var showingExport = false
+    @State private var exportError: String?
     @State private var showingPaywall = false
     @State private var notificationStatus: UNAuthorizationStatus = .notDetermined
 
@@ -143,6 +149,24 @@ struct SettingsView: View {
                         }
                     }
 
+                    Section(String(localized: "Your purchase data")) {
+                        Button {
+                            let date = DateFormatter(); date.calendar = Calendar(identifier: .gregorian)
+                            date.locale = Locale(identifier: "en_US_POSIX"); date.dateFormat = "yyyy-MM-dd"
+                            let rows = purchases.map { item in PurchaseCSV.Row(name: item.name, merchant: item.merchant,
+                                price: item.price, currency: Locale.current.currency?.identifier ?? "EUR",
+                                purchaseDate: date.string(from: item.purchaseDate), returnDate: date.string(from: item.returnDeadline),
+                                outcome: item.outcomeRawValue, uses: item.useCount,
+                                category: (PurchaseCategory(rawValue: item.categoryRawValue) ?? .other).title) }
+                            exportDocument = PurchaseCSVDocument(text: PurchaseCSV.encode(rows, german: Locale.current.language.languageCode?.identifier == "de"))
+                            showingExport = true
+                        } label: { Label(String(localized: "Export purchases (CSV)"), systemImage: "square.and.arrow.up") }
+                        .disabled(purchases.isEmpty)
+                        Text(String(localized: "All purchases and usage totals, ready for Numbers or Excel. Receipt photos are not included."))
+                            .font(.caption).foregroundStyle(.secondary)
+                        if let exportError { Text(exportError).foregroundStyle(.red) }
+                    }
+
                     Section(String(localized: "Privacy")) {
                         Label {
                             VStack(alignment: .leading, spacing: 3) {
@@ -192,6 +216,11 @@ struct SettingsView: View {
             .sheet(isPresented: $showingPaywall) {
                 PaywallView()
                     .tint(KMTheme.accent)
+            }
+            .fileExporter(isPresented: $showingExport, document: exportDocument,
+                          contentType: .commaSeparatedText, defaultFilename: "KeepMeter-Purchases") { result in
+                if case .failure = result { exportError = String(localized: "Couldn't export purchases. Please try again.") }
+                else { exportError = nil }
             }
             .task {
                 await refreshNotificationStatus()

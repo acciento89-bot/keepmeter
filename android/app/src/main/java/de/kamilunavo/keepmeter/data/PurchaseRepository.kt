@@ -51,6 +51,11 @@ class PurchaseRepository(private val dao: PurchaseDao) {
         dao.deletePurchase(purchaseId)
     }
 
+    suspend fun getPurchase(id: String) = dao.getById(id)?.purchase
+
+    suspend fun updateCategory(id: String, category: String) = dao.updateCategory(id, category)
+    suspend fun updateReceipt(id: String, path: String?) = dao.updateReceipt(id, path)
+
     suspend fun activeCount(): Int = dao.activePurchaseCount()
 }
 
