@@ -45,4 +45,44 @@
  [NSThread sleepForTimeInterval:2];NSLog(@"AFTER_SAVE_TREE %@",app.debugDescription);[self capture:@"iPhone-08-export-saved"];
  XCTAssertFalse(app.textFields[@"DOCPicker.filenameTextField"].exists);
 }
+- (void)storeGallery:(BOOL)german {
+ self.continueAfterFailure=NO;
+ XCUIApplication*app=[[XCUIApplication alloc]initWithBundleIdentifier:@"de.kamilunavo.keepmeter"];
+ NSMutableArray*args=[NSMutableArray arrayWithArray:@[@"-hasCompletedOnboarding",@"YES",@"-AppleLanguages",german?@"(de)":@"(en)",@"-AppleLocale",german?@"de_DE":@"en_US",@"--keepMeterRuntimeSeed",@"--keepMeterStoreScreenshot"]];
+ if(german)[args addObject:@"--keepMeterStoreScreenshotSeed"];
+ app.launchArguments=args;[app launch];
+ NSString*name=german?@"Kopfhörer":@"Studio Headphones";
+ XCTAssertTrue([app.staticTexts[name] waitForExistenceWithTimeout:20]);[self capture:@"01-purchase-centre"];
+ [app swipeUp];[app.staticTexts[name] tap];XCTAssertTrue([app.navigationBars[name] waitForExistenceWithTimeout:5]);
+ XCUIElement*category=[app.buttons matchingPredicate:[NSPredicate predicateWithFormat:@"label BEGINSWITH %@",german?@"Kategorie":@"Category"]].firstMatch;
+ for(int i=0;i<4&&!category.hittable;i++)[app swipeUp];[category tap];
+ [app.buttons[german?@"Technik":@"Technology"] tap];
+ XCUIElement*photo=app.buttons[german?@"Belegfoto hinzufügen":@"Add receipt photo"];
+ for(int i=0;i<4&&!photo.hittable;i++)[app swipeUp];[photo tap];
+ NSLog(@"GALLERY_PHOTOS_TREE %@",app.debugDescription);
+ XCUIElement*cell=app.images[@"PXGGridLayout-Info"].firstMatch;XCTAssertTrue([cell waitForExistenceWithTimeout:45]);
+ [[cell coordinateWithNormalizedOffset:CGVectorMake(0.5,0.5)] tap];
+ XCUIElement*add=app.buttons[german?@"Hinzufügen":@"Add"];if(add.exists&&add.hittable)[add tap];
+ XCUIElement*receipt=app.images[german?@"Belegfoto":@"Receipt photo"];XCTAssertTrue([receipt waitForExistenceWithTimeout:10]);
+ // Position the actual image from its accessibility frame, preserving the category above it.
+ for(int i=0;i<4;i++) {
+  CGFloat delta=260-receipt.frame.origin.y;
+  if(fabs(delta)<35)break;
+  CGFloat fraction=MAX(-0.3,MIN(0.3,delta/app.frame.size.height));
+  XCUICoordinate*start=[app coordinateWithNormalizedOffset:CGVectorMake(0.85,0.5)];
+  XCUICoordinate*end=[app coordinateWithNormalizedOffset:CGVectorMake(0.85,0.5+fraction)];
+  [start pressForDuration:0.05 thenDragToCoordinate:end];
+ }
+ XCTAssertGreaterThanOrEqual(receipt.frame.origin.y,140);
+ XCTAssertLessThan(CGRectGetMaxY(receipt.frame),850);
+ [self capture:@"02-receipt-folder"];
+ [app.navigationBars.buttons.firstMatch tap];
+ [app.tabBars.buttons[german?@"Auswertung":@"Insights"] tap];[self capture:@"03-usage-insights"];
+ [app.tabBars.buttons[german?@"Einstellungen":@"Settings"] tap];
+ XCUIElement*export=app.buttons[german?@"Käufe exportieren (CSV)":@"Export purchases (CSV)"];
+ for(int i=0;i<4&&!export.hittable;i++)[app swipeUp];XCTAssertTrue(export.hittable);[self capture:@"04-csv-export"];
+ [app terminate];
+}
+- (void)testStoreGalleryDE { [self storeGallery:YES]; }
+- (void)testStoreGalleryEN { [self storeGallery:NO]; }
 @end

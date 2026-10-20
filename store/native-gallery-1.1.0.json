@@ -1,0 +1,156 @@
+{
+  "version": "1.1.0",
+  "iosBuild": 5,
+  "androidVersionCode": 6,
+  "syntheticLocalData": true,
+  "transactions": false,
+  "androidNativeCaptureSeconds": 23.615,
+  "iphoneEnglishCaptureSeconds": 34.199,
+  "iphoneGermanCaptureSeconds": 39.603,
+  "screenshots": [
+    {
+      "path": "store/google-play/screenshots/de-DE/01-purchase-centre.png",
+      "pixels": [
+        1080,
+        2400
+      ],
+      "sha256": "f6b51e74ee468b83fd13abd0bb113941b3bd96e9d7a63fb307c36b5655859532"
+    },
+    {
+      "path": "store/google-play/screenshots/de-DE/02-return-filters.png",
+      "pixels": [
+        1080,
+        2400
+      ],
+      "sha256": "e6ba787c6130abffea8276eb4d8e4debcc168423a4b64408432c86736e6756e4"
+    },
+    {
+      "path": "store/google-play/screenshots/de-DE/03-receipt-folder.png",
+      "pixels": [
+        1080,
+        2400
+      ],
+      "sha256": "a27af5bf09e8a8fdbbeb118dc2d6c5a5f52bd6c879e5b9c3eb24c8a47c1302f2"
+    },
+    {
+      "path": "store/google-play/screenshots/de-DE/04-usage-insights.png",
+      "pixels": [
+        1080,
+        2400
+      ],
+      "sha256": "dee2ad6b0220f4380874737d07a6f20abbc0610041b571e143d5f4671cf3e4a2"
+    },
+    {
+      "path": "store/google-play/screenshots/de-DE/05-csv-export.png",
+      "pixels": [
+        1080,
+        2400
+      ],
+      "sha256": "da73904d624c64d03f05a3a9b3104aea29aa90c2c135dc6d2a204f32959fb9d7"
+    },
+    {
+      "path": "store/google-play/screenshots/en-US/01-purchase-centre.png",
+      "pixels": [
+        1080,
+        2400
+      ],
+      "sha256": "56f3cf4fb08ef8f9cb596eaa643c315004fb1e9e71bae4bca6e257842ab28cc4"
+    },
+    {
+      "path": "store/google-play/screenshots/en-US/02-return-filters.png",
+      "pixels": [
+        1080,
+        2400
+      ],
+      "sha256": "342e00c309d08e4a50beccd0aa96f4eb82904c6d8e5b85825568c6311035f71a"
+    },
+    {
+      "path": "store/google-play/screenshots/en-US/03-receipt-folder.png",
+      "pixels": [
+        1080,
+        2400
+      ],
+      "sha256": "49af73df2ba5ff34e81a6b90be3aa168f478b61d8f2b7a8ebe526f961bdf3a17"
+    },
+    {
+      "path": "store/google-play/screenshots/en-US/04-usage-insights.png",
+      "pixels": [
+        1080,
+        2400
+      ],
+      "sha256": "71bd25aeda81c0d4da92b980e083711a7c532f1374cb03f8c0e0dbf7986fae5c"
+    },
+    {
+      "path": "store/google-play/screenshots/en-US/05-csv-export.png",
+      "pixels": [
+        1080,
+        2400
+      ],
+      "sha256": "dd74a20bfac6166a0466d49c4088fed5f877232bf5e8c53a2d501235a224a0e8"
+    },
+    {
+      "path": "store/app-store/screenshots/de-DE/01-purchase-centre.png",
+      "pixels": [
+        1320,
+        2868
+      ],
+      "sha256": "836574eb1734f6cf6ab110148bba6335a52d75ee8ce2ab69b27b2e95a28a9a31"
+    },
+    {
+      "path": "store/app-store/screenshots/de-DE/02-receipt-folder.png",
+      "pixels": [
+        1320,
+        2868
+      ],
+      "sha256": "dbd0f788c6be1979ade3b1d5511faccf27d9609e170f2f606d8677749880c6de"
+    },
+    {
+      "path": "store/app-store/screenshots/de-DE/03-usage-insights.png",
+      "pixels": [
+        1320,
+        2868
+      ],
+      "sha256": "cc56068e7899d69ce926f95a71cd0c939ae19639061320af349ee8bfbe7ae841"
+    },
+    {
+      "path": "store/app-store/screenshots/de-DE/04-csv-export.png",
+      "pixels": [
+        1320,
+        2868
+      ],
+      "sha256": "1ea4667283004177d0b3509f9f9ee6e50bced23d05999f557dde0bbeef48b702"
+    },
+    {
+      "path": "store/app-store/screenshots/en-US/01-purchase-centre.png",
+      "pixels": [
+        1320,
+        2868
+      ],
+      "sha256": "5b6a731623bf44d3c17d025db26b4c598027e7f2701d09c15e274d7f299a9787"
+    },
+    {
+      "path": "store/app-store/screenshots/en-US/02-receipt-folder.png",
+      "pixels": [
+        1320,
+        2868
+      ],
+      "sha256": "847bdb0713f581409c22c0cf528d82e98385f13d93dc1f4e8b2173111ec19097"
+    },
+    {
+      "path": "store/app-store/screenshots/en-US/03-usage-insights.png",
+      "pixels": [
+        1320,
+        2868
+      ],
+      "sha256": "4aecd4663e945458a1067f10998cc5bf332ebe57a1b34ecc6d2129a71c416d7a"
+    },
+    {
+      "path": "store/app-store/screenshots/en-US/04-csv-export.png",
+      "pixels": [
+        1320,
+        2868
+      ],
+      "sha256": "7074b5e6471f8e266da44423a6ab466f58c149f310461c48021ec555b51c4647"
+    }
+  ]
+}
