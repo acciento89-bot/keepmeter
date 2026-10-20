@@ -32,8 +32,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with: {gradle-version: '9.5.0'}
       - name: Restore upload identity from KMS vault
-        uses: acciento89-bot/maengelfix/.github/actions/restore-android-signing@main
-        with: {app-id: keepmeter}
+        uses: acciento89-bot/maengelfix/.github/actions/restore-central-android-signing@main
       - name: Build and verify signed release bundle
         shell: bash
         run: |
@@ -43,6 +42,10 @@ jobs:
           AAB='android/app/build/outputs/bundle/release/app-release.aab'; test -s "$AAB"
           if ! jarsigner -verify "$AAB" 2>/dev/null | grep -Fq 'jar verified.'; then jarsigner -keystore "$ANDROID_UPLOAD_KEYSTORE_PATH" -storepass "$ANDROID_UPLOAD_KEYSTORE_PASSWORD" -keypass "$ANDROID_UPLOAD_KEY_PASSWORD" "$AAB" "$ANDROID_UPLOAD_KEY_ALIAS"; fi
           jarsigner -verify "$AAB" | grep -Fq 'jar verified.'
+          test "$KAMILUNAVO_CENTRAL_UPLOAD_SHA1" = BCF2337D41E617C03BCAE698C09D1523654BD790
+          keytool -J-Duser.language=en -printcert -jarfile "$AAB" > "$RUNNER_TEMP/keepmeter-upload-certificate.txt"
+          actual_sha1=$(sed -n 's/^[[:space:]]*SHA1: //p' "$RUNNER_TEMP/keepmeter-upload-certificate.txt" | tr -d ':\r\n ')
+          test "$actual_sha1" = BCF2337D41E617C03BCAE698C09D1523654BD790
           grep -Fq 'versionCode = 6' android/app/build.gradle.kts
           echo "AAB_PATH=$AAB" >> "$GITHUB_ENV"
       - id: google-auth
@@ -82,5 +85,5 @@ jobs:
         if: always()
         shell: bash
         run: |
-          rm -f "$RUNNER_TEMP/kamilunavo-upload.jks"
-          rm -rf "$RUNNER_TEMP/kamilunavo-signing-vault"
+          rm -f "$RUNNER_TEMP/kamilunavo-central-upload.p12"
+          rm -rf "$RUNNER_TEMP/kamilunavo-central-signing"
