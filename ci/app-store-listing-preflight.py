@@ -23,7 +23,7 @@ def main() -> None:
         fail(f"expected locales {sorted(REQUIRED_LOCALES)}, found {sorted(data)}")
 
     for locale, fields in data.items():
-        if fields.get("name") != "KeepMeter":
+        if fields.get("name") != {"de-DE": "KeepMeter: Käufe & Rückgabe", "en-US": "KeepMeter: Returns & Cost"}[locale]:
             fail(f"{locale} app name drifted from KeepMeter")
 
         for key, limit in LIMITS.items():

@@ -1,6 +1,9 @@
 package de.kamilunavo.keepmeter
 
 import android.app.Application
+import android.net.Uri
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import de.kamilunavo.keepmeter.data.PurchaseWithUsage
@@ -81,9 +84,35 @@ class KeepMeterViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
+    fun updateCategory(purchaseId: String, category: String, onError: () -> Unit) {
+        viewModelScope.launch {
+            try {
+                repository.updateCategory(purchaseId, category)
+            } catch (_: Exception) { onError() }
+        }
+    }
+
+    fun updateReceipt(purchaseId: String, uri: Uri?, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            var newPath: String? = null
+            try {
+                val old = repository.getPurchase(purchaseId) ?: error("Purchase missing")
+                if (uri != null) newPath = withContext(Dispatchers.IO) { ReceiptStorage.save(getApplication(), uri) }
+                repository.updateReceipt(purchaseId, newPath)
+                withContext(Dispatchers.IO) { ReceiptStorage.delete(getApplication(), old.receiptPath) }
+                onResult(true)
+            } catch (_: Exception) {
+                withContext(Dispatchers.IO) { ReceiptStorage.delete(getApplication(), newPath) }
+                onResult(false)
+            }
+        }
+    }
+
     fun deletePurchase(purchaseId: String) {
         viewModelScope.launch {
+            val old = repository.getPurchase(purchaseId)
             repository.deletePurchase(purchaseId)
+            withContext(Dispatchers.IO) { ReceiptStorage.delete(getApplication(), old?.receiptPath) }
             ReturnReminderScheduler.cancel(getApplication(), purchaseId)
         }
     }

@@ -59,6 +59,9 @@ jobs:
             -o /tmp/keepmeter-product-rules-smoke
           /tmp/keepmeter-product-rules-smoke
 
+      - name: Exercise purchase centre export, filters and legacy migration
+        run: bash ci/purchase-centre-smoke.sh
+
       - name: Exercise SwiftData persistence reopen
         run: |
           set -euo pipefail

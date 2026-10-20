@@ -9,10 +9,25 @@ struct DashboardView: View {
 
     @State private var showingAddPurchase = false
     @State private var showingPaywall = false
+    @State private var searchText = ""
+    @State private var categoryFilter = "all"
+    @State private var dueSoon = false
+    @State private var sortOrder = "deadline"
     @State private var dataErrorMessage: String?
 
     private var activePurchases: [Purchase] {
         purchases.filter { $0.outcome == .active }
+    }
+
+    private var visiblePurchases: [Purchase] {
+        activePurchases.filter {
+            PurchaseFilter.matches(name: $0.name, merchant: $0.merchant, category: $0.categoryRawValue,
+                daysRemaining: $0.daysRemaining(), query: searchText, categoryFilter: categoryFilter, dueSoon: dueSoon)
+        }.sorted {
+            if sortOrder == "price" { return $0.price > $1.price }
+            if sortOrder == "name" { return $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+            return $0.returnDeadline < $1.returnDeadline
+        }
     }
 
     private var hasReachedFreeLimit: Bool {
@@ -42,7 +57,11 @@ struct DashboardView: View {
                                 freeLimitBanner
                             }
 
-                            ForEach(activePurchases) { purchase in
+                            organisationFilters
+                            if visiblePurchases.isEmpty {
+                                ContentUnavailableView.search(text: searchText)
+                            }
+                            ForEach(visiblePurchases) { purchase in
                                 PurchaseCardView(purchase: purchase) {
                                     logUse(for: purchase)
                                 }
@@ -57,6 +76,7 @@ struct DashboardView: View {
             }
             .navigationTitle(String(localized: "KeepMeter"))
             .kmBrandedNavigation()
+            .searchable(text: $searchText, prompt: String(localized: "Search purchases or merchants"))
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
@@ -93,6 +113,24 @@ struct DashboardView: View {
                 Text(dataErrorMessage ?? "")
             }
         }
+    }
+
+    private var organisationFilters: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Picker(String(localized: "Category"), selection: $categoryFilter) {
+                    Text(String(localized: "All categories")).tag("all")
+                    ForEach(PurchaseCategory.allCases) { Text($0.title).tag($0.rawValue) }
+                }
+                Spacer()
+                Picker(String(localized: "Sort purchases"), selection: $sortOrder) {
+                    Text(String(localized: "Return date")).tag("deadline")
+                    Text(String(localized: "Highest price")).tag("price")
+                    Text(String(localized: "Name")).tag("name")
+                }
+            }.pickerStyle(.menu)
+            Toggle(String(localized: "Due in the next 7 days"), isOn: $dueSoon)
+        }.padding(14).kmCard()
     }
 
     private var dashboardHeader: some View {

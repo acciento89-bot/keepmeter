@@ -1,6 +1,9 @@
 package de.kamilunavo.keepmeter.data
 
 import android.content.Context
+import androidx.room.ColumnInfo
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.room.Dao
 import androidx.room.Database
 import androidx.room.Embedded
@@ -28,6 +31,8 @@ data class PurchaseEntity(
     val createdAtEpochMillis: Long,
     val outcome: String,
     val archivedAtEpochMillis: Long?,
+    @ColumnInfo(defaultValue = "'other'") val category: String = "other",
+    val receiptPath: String? = null,
 )
 
 @Entity(
@@ -73,6 +78,12 @@ interface PurchaseDao {
     @Update
     suspend fun updatePurchase(purchase: PurchaseEntity)
 
+    @Query("UPDATE purchases SET category = :category WHERE id = :id")
+    suspend fun updateCategory(id: String, category: String)
+
+    @Query("UPDATE purchases SET receiptPath = :path WHERE id = :id")
+    suspend fun updateReceipt(id: String, path: String?)
+
     @Query("DELETE FROM purchases WHERE id = :id")
     suspend fun deletePurchase(id: String)
 
@@ -82,7 +93,7 @@ interface PurchaseDao {
 
 @Database(
     entities = [PurchaseEntity::class, UsageEventEntity::class],
-    version = 1,
+    version = 2,
     exportSchema = false,
 )
 abstract class KeepMeterDatabase : RoomDatabase() {
@@ -96,7 +107,12 @@ abstract class KeepMeterDatabase : RoomDatabase() {
                 context.applicationContext,
                 KeepMeterDatabase::class.java,
                 "keepmeter.db",
-            ).build().also { instance = it }
+            ).addMigrations(object : Migration(1, 2) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE purchases ADD COLUMN category TEXT NOT NULL DEFAULT 'other'")
+                    db.execSQL("ALTER TABLE purchases ADD COLUMN receiptPath TEXT")
+                }
+            }).build().also { instance = it }
         }
     }
 }

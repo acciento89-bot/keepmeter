@@ -18,6 +18,8 @@ final class Purchase {
     var createdAt: Date
     var outcomeRawValue: String
     var archivedAt: Date?
+    var categoryRawValue: String = "other"
+    @Attribute(.externalStorage) var receiptPhoto: Data? = nil
 
     @Relationship(deleteRule: .cascade)
     var usageEvents: [UsageEvent]

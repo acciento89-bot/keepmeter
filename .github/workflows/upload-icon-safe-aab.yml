@@ -13,7 +13,7 @@ permissions:
 
 env:
   PACKAGE_NAME: de.kamilunavo.keepmeter
-  EXPECTED_VERSION_CODE: '5'
+  EXPECTED_VERSION_CODE: '6'
   WIF_PROVIDER: projects/1058001477767/locations/global/workloadIdentityPools/github/providers/github-actions
   GOOGLE_SERVICE_ACCOUNT: navoops@emerald-caster-508318-f2.iam.gserviceaccount.com
 
@@ -40,7 +40,7 @@ jobs:
           AAB='android/app/build/outputs/bundle/release/app-release.aab'; test -s "$AAB"
           if ! jarsigner -verify "$AAB" 2>/dev/null | grep -Fq 'jar verified.'; then jarsigner -keystore "$ANDROID_UPLOAD_KEYSTORE_PATH" -storepass "$ANDROID_UPLOAD_KEYSTORE_PASSWORD" -keypass "$ANDROID_UPLOAD_KEY_PASSWORD" "$AAB" "$ANDROID_UPLOAD_KEY_ALIAS"; fi
           jarsigner -verify "$AAB" | grep -Fq 'jar verified.'
-          grep -Fq 'versionCode = 5' android/app/build.gradle.kts
+          grep -Fq 'versionCode = 6' android/app/build.gradle.kts
           echo "AAB_PATH=$AAB" >> "$GITHUB_ENV"
       - id: google-auth
         uses: google-github-actions/auth@v3
