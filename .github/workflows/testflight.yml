@@ -114,7 +114,7 @@ jobs:
 
           test "$BUNDLE_ID" = "de.kamilunavo.keepmeter"
           test "$VERSION" = "1.1.0"
-          test "$BUILD" = "5"
+          test "$BUILD" = "6"
 
           echo "✓ Signed archive identity = $BUNDLE_ID $VERSION ($BUILD)"
           codesign -dvv "$APP" 2>&1 | grep -E 'Identifier=|Authority=|TeamIdentifier=' || true
