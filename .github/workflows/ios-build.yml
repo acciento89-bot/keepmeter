@@ -65,6 +65,9 @@ jobs:
             -o /tmp/keepmeter-product-rules-smoke
           /tmp/keepmeter-product-rules-smoke
 
+      - name: Verify provider-disabled QA and unchanged release provider behavior
+        run: bash ci/provider-isolation-smoke.sh
+
       - name: Exercise purchase centre export, filters and legacy migration
         run: bash ci/purchase-centre-smoke.sh
 

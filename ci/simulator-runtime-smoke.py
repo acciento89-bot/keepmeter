@@ -295,6 +295,7 @@ def launch(
     args.extend([
         udid,
         BUNDLE_ID,
+        "--keepMeterProviderDisabledQA",
         "-AppleLanguages",
         f"({language})",
         "-AppleLocale",
@@ -326,7 +327,7 @@ def launch(
 
     print("Active scene not visible yet; nudging KeepMeter to the foreground", flush=True)
     try:
-        simctl(["launch", udid, BUNDLE_ID], timeout=10, check=False)
+        simctl(["launch", udid, BUNDLE_ID, "--keepMeterProviderDisabledQA"], timeout=10, check=False)
     except RuntimeSmokeError as exc:
         print(f"Foreground nudge did not return promptly: {exc}", flush=True)
 

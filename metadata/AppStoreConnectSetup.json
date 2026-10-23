@@ -8,7 +8,7 @@
     "primaryCategory": "Utilities",
     "basePrice": "Free",
     "marketingVersion": "1.1.0",
-    "buildNumber": "5"
+    "buildNumber": "6"
   },
   "localizations": [
     "de-DE",
@@ -49,7 +49,7 @@
     "workflow": ".github/workflows/testflight.yml",
     "manualOnly": true,
     "requiredBranch": "main",
-    "confirmation": "UPLOAD_KEEP_METER_1_1_0_BUILD_5",
+    "confirmation": "UPLOAD_KEEP_METER_1_1_0_BUILD_6",
     "manageAppVersionAndBuildNumber": false,
     "requiredSecrets": [
       "ASC_ISSUER_ID",

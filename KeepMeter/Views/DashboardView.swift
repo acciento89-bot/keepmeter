@@ -77,19 +77,22 @@ struct DashboardView: View {
             .navigationTitle(String(localized: "KeepMeter"))
             .kmBrandedNavigation()
             .searchable(text: $searchText, prompt: String(localized: "Search purchases or merchants"))
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        presentAddPurchase()
-                    } label: {
-                        Image(systemName: "plus")
-                            .font(.headline)
-                            .frame(width: 34, height: 34)
-                            .background(KMTheme.accent.opacity(0.12), in: Circle())
-                    }
-                    .foregroundStyle(KMTheme.accent)
-                    .accessibilityLabel(String(localized: "Add purchase"))
+            // Keep the primary action in the safe-area layout: the native
+            // adaptive navigation rail can drop toolbar items after a Duo fold
+            // while a sheet is open. This action survives that scene resize.
+            .safeAreaInset(edge: .bottom) {
+                Button {
+                    presentAddPurchase()
+                } label: {
+                    Label(String(localized: "Add purchase"), systemImage: "plus")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity, minHeight: 44)
                 }
+                .buttonStyle(.borderedProminent)
+                .tint(KMTheme.accent)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(.ultraThinMaterial)
             }
             .sheet(isPresented: $showingAddPurchase) {
                 AddPurchaseView()
@@ -207,16 +210,6 @@ struct DashboardView: View {
                     .frame(maxWidth: 330)
             }
 
-            Button {
-                presentAddPurchase()
-            } label: {
-                Label(String(localized: "Add purchase"), systemImage: "plus")
-                    .font(.headline)
-                    .frame(maxWidth: 300)
-                    .padding(.vertical, 14)
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(KMTheme.accent)
 
             Spacer()
             Spacer()
