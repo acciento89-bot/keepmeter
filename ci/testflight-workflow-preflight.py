@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from pathlib import Path
+import json
 
 WORKFLOW = Path('.github/workflows/testflight.yml')
 
@@ -7,6 +8,10 @@ if not WORKFLOW.is_file():
     raise SystemExit('TestFlight workflow is missing')
 
 text = WORKFLOW.read_text(encoding='utf-8')
+setup = json.loads(Path('metadata/AppStoreConnectSetup.json').read_text(encoding='utf-8'))
+expected_version = setup['appRecord']['marketingVersion']
+expected_build = setup['appRecord']['buildNumber']
+expected_confirmation = setup['testFlight']['confirmation']
 
 for forbidden in ('\n  push:', '\n  pull_request:', '\n  schedule:'):
     if forbidden in text:
@@ -14,7 +19,7 @@ for forbidden in ('\n  push:', '\n  pull_request:', '\n  schedule:'):
 
 required = (
     'workflow_dispatch:',
-    'UPLOAD_KEEP_METER_1_1_0_BUILD_6',
+    expected_confirmation,
     'test "$GITHUB_REF" = "refs/heads/main"',
     'runs-on: macos-26',
     'sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer',
@@ -35,8 +40,8 @@ required = (
     '-authenticationKeyIssuerID "$ASC_ISSUER_ID"',
     'codesign --verify --deep --strict --verbose=2 "$APP"',
     'test "$BUNDLE_ID" = "de.kamilunavo.keepmeter"',
-    'test "$VERSION" = "1.1.0"',
-    'test "$BUILD" = "5"',
+    f'test "$VERSION" = "{expected_version}"',
+    f'test "$BUILD" = "{expected_build}"',
     '<string>app-store-connect</string>',
     '<string>upload</string>',
     '<string>automatic</string>',
@@ -76,7 +81,7 @@ if text.count('-authenticationKeyIssuerID "$ASC_ISSUER_ID"') < 2:
     raise SystemExit('ASC issuer ID must be supplied to both archive and export')
 
 print('✓ TestFlight workflow is workflow_dispatch-only')
-print('✓ Upload is locked to main and explicit KeepMeter 1.1.0 (6) confirmation')
+print(f'✓ Upload is locked to main and explicit KeepMeter {expected_version} ({expected_build}) confirmation')
 print('✓ Exact bundle/version/build identity is verified before upload')
 print('✓ App Store Connect credentials and Automatic Signing path are pinned')
 print('✓ App Store Connect is forbidden from auto-changing the build number')
