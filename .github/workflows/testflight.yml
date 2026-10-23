@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       confirm_upload:
-        description: 'Type UPLOAD_KEEP_METER_1_1_0_BUILD_5 to upload KeepMeter 1.1.0 (5)'
+        description: 'Type UPLOAD_KEEP_METER_1_1_0_BUILD_6 to upload KeepMeter 1.1.0 (6)'
         required: true
         type: string
 
@@ -38,11 +38,11 @@ jobs:
             echo "::error title=TestFlight guard::Uploads are allowed only from main; got $GITHUB_REF"
             exit 1
           }
-          test "$CONFIRM_UPLOAD" = "UPLOAD_KEEP_METER_1_1_0_BUILD_5" || {
-            echo "::error title=TestFlight guard::Confirmation phrase does not match KeepMeter 1.1.0 (5)"
+          test "$CONFIRM_UPLOAD" = "UPLOAD_KEEP_METER_1_1_0_BUILD_6" || {
+            echo "::error title=TestFlight guard::Confirmation phrase does not match KeepMeter 1.1.0 (6)"
             exit 1
           }
-          echo "✓ Explicit upload confirmation accepted for KeepMeter 1.1.0 (5)"
+          echo "✓ Explicit upload confirmation accepted for KeepMeter 1.1.0 (6)"
 
       - name: Select proven Xcode toolchain
         shell: bash

@@ -13,7 +13,18 @@ final class EntitlementStore: ObservableObject {
 
     private var updatesTask: Task<Void, Never>?
 
+    #if DEBUG
+    // Explicit native layout QA must never contact or reconcile the real store.
+    // This switch does not exist in release builds and never grants Pro access.
+    private var providerDisabledForQA: Bool {
+        ProcessInfo.processInfo.arguments.contains("--keepMeterProviderDisabledQA")
+    }
+    #endif
+
     init() {
+        #if DEBUG
+        guard !providerDisabledForQA else { return }
+        #endif
         updatesTask = Task { [weak self] in
             for await update in Transaction.updates {
                 guard let self else { return }
@@ -38,6 +49,9 @@ final class EntitlementStore: ObservableObject {
     }
 
     func load() async {
+        #if DEBUG
+        guard !providerDisabledForQA else { return }
+        #endif
         lastErrorMessage = nil
         isLoading = true
         defer { isLoading = false }
@@ -63,6 +77,9 @@ final class EntitlementStore: ObservableObject {
     }
 
     func purchaseLifetime() async {
+        #if DEBUG
+        guard !providerDisabledForQA else { return }
+        #endif
         lastErrorMessage = nil
 
         if lifetimeProduct == nil {
@@ -113,6 +130,9 @@ final class EntitlementStore: ObservableObject {
     }
 
     func restorePurchases() async {
+        #if DEBUG
+        guard !providerDisabledForQA else { return }
+        #endif
         lastErrorMessage = nil
         isLoading = true
         defer { isLoading = false }
@@ -129,6 +149,9 @@ final class EntitlementStore: ObservableObject {
     }
 
     func refreshEntitlements() async {
+        #if DEBUG
+        guard !providerDisabledForQA else { return }
+        #endif
         var hasLifetime = false
 
         for await entitlement in Transaction.currentEntitlements {
