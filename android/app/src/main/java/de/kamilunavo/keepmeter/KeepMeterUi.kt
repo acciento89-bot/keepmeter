@@ -73,11 +73,11 @@ private val BlueSoft = Color(0xFF64A1FF)
 private val Success = Color(0xFF22A86E)
 private val Warning = Color(0xFFF2931F)
 private val Danger = Color(0xFFEB454F)
-private val Page = Color(0xFFF6F8FD)
+private val Page = Color(0xFFF5F2E9)
 private val Surface = Color(0xFFFFFFFF)
 private val Ink = Color(0xFF151923)
 private val Secondary = Color(0xFF6C7483)
-private val Hairline = Color(0xFFE4E8F0)
+private val Hairline = Color(0xFFD9D4C7)
 private val BrandGradient = Brush.linearGradient(
     colors = listOf(Color(0xFF1F53CC), Blue, Color(0xFF68A5FF)),
     start = Offset.Zero,
@@ -121,8 +121,8 @@ internal fun KeepMeterRoot(
     val copy = remember(configuration.locales, forceGerman) {
         Copy(forceGerman || configuration.locales[0]?.language == "de")
     }
-    MaterialTheme(colorScheme = KmColors, typography = KmTypography) {
-        Box(Modifier.fillMaxSize().background(BrandGradient)) {
+    MaterialTheme(colorScheme = KmColors, typography = brandedTypography(KmTypography)) {
+        Box(Modifier.fillMaxSize().background(Ink)) {
             if (!onboardingDone) Onboarding(copy) { prefs.edit().putBoolean("onboarding_done", true).apply(); onboardingDone = true }
             else MainExperience(activity, vm, billing, copy) { prefs.edit().putBoolean("onboarding_done", false).apply(); onboardingDone = false }
         }
@@ -194,7 +194,7 @@ private fun MainShell(tab: MainTab, copy: Copy, onTab: (MainTab) -> Unit, onAdd:
         }
     }, bottomBar = { BottomBar(tab, copy, onTab) }) { padding ->
         Box(
-            Modifier.fillMaxSize().padding(padding).clip(RoundedCornerShape(topStart = 34.dp, topEnd = 34.dp)).background(Page),
+            Modifier.fillMaxSize().padding(padding).clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)).background(Page),
             contentAlignment = Alignment.TopCenter,
         ) { Box(Modifier.fillMaxWidth().widthIn(max = 720.dp).padding(top = 10.dp)) { content() } }
     }
@@ -260,15 +260,18 @@ private fun ActiveScreen(items: List<PurchaseWithUsage>, vm: KeepMeterViewModel,
 @Composable
 private fun PurchaseCard(item: PurchaseWithUsage, vm: KeepMeterViewModel, copy: Copy, onOpen: (String) -> Unit) {
     val decision = vm.decision(item); val tint = decisionColor(decision.status); val progress = returnProgress(item)
-    KmCard(Modifier.fillMaxWidth(), 22.dp) {
+    KmCard(Modifier.fillMaxWidth(), 6.dp) {
         Column {
             Column(Modifier.fillMaxWidth().clickable(role = Role.Button) { onOpen(item.purchase.id) }.padding(16.dp), verticalArrangement = Arrangement.spacedBy(15.dp)) {
                 Row(verticalAlignment = Alignment.Top) {
                     Column(Modifier.weight(1f)) { Text(item.purchase.name, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis); if (item.purchase.merchant.isNotBlank()) Text(item.purchase.merchant, color = Secondary, style = MaterialTheme.typography.bodyMedium) }
                     StatusBadge(decisionLabel(decision.status, copy), tint)
                 }
-                Row(Modifier.fillMaxWidth()) {
-                    CompactMetric(copy.uses, decision.useCount.toString(), Modifier.weight(1f)); CompactMetric(copy.costUse, decision.costPerUse?.let(::money) ?: "—", Modifier.weight(1f)); CompactMetric(copy.daysLeft, decision.daysRemaining.toString(), Modifier.weight(1f))
+                Column(Modifier.fillMaxWidth().background(Page).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row { Text(copy.daysLeft, Modifier.weight(1f), color = Secondary); Text(decision.daysRemaining.toString(), color = tint, style = MaterialTheme.typography.titleLarge) }
+                    HorizontalDivider(color = Hairline)
+                    Row { Text(copy.costUse, Modifier.weight(1f), color = Secondary); Text(decision.costPerUse?.let(::money) ?: "—", fontWeight = FontWeight.Bold) }
+                    Row { Text(copy.uses, Modifier.weight(1f), color = Secondary); Text(decision.useCount.toString()) }
                 }
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Row { Text(copy.t("Rückgabefrist", "Return window"), style = MaterialTheme.typography.bodySmall, color = Secondary); Spacer(Modifier.weight(1f)); Text(date(item.purchase.returnDeadlineEpochMillis), style = MaterialTheme.typography.bodySmall, color = Secondary) }
@@ -484,14 +487,14 @@ private fun FullScreen(title: String, onBack: () -> Unit, content: @Composable C
         }
     }) { padding ->
         Column(
-            Modifier.fillMaxSize().padding(padding).clip(RoundedCornerShape(topStart = 34.dp, topEnd = 34.dp)).background(Page).verticalScroll(rememberScrollState()).imePadding(),
+            Modifier.fillMaxSize().padding(padding).clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)).background(Page).verticalScroll(rememberScrollState()).imePadding(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) { Column(Modifier.fillMaxWidth().widthIn(max = 680.dp).padding(horizontal = 18.dp, vertical = 22.dp).padding(bottom = 30.dp), verticalArrangement = Arrangement.spacedBy(20.dp), content = content) }
     }
 }
 
 @Composable
-private fun KmCard(modifier: Modifier = Modifier, radius: Dp = 24.dp, content: @Composable BoxScope.() -> Unit) {
+private fun KmCard(modifier: Modifier = Modifier, radius: Dp = 6.dp, content: @Composable BoxScope.() -> Unit) {
     Box(modifier.background(Surface, RoundedCornerShape(radius)).border(1.dp, Hairline, RoundedCornerShape(radius)).padding(0.dp), content = content)
 }
 
@@ -500,7 +503,7 @@ private fun BrandMark() { Box(Modifier.size(32.dp).background(Blue, RoundedCorne
 
 @Composable
 private fun GradientButton(label: String, icon: KmIcon? = null, enabled: Boolean = true, onClick: () -> Unit) {
-    Box(Modifier.fillMaxWidth().heightIn(min = 56.dp).clip(RoundedCornerShape(18.dp)).background(if (enabled) Brush.horizontalGradient(listOf(Blue, BlueSoft)) else Brush.horizontalGradient(listOf(Secondary.copy(alpha=.35f), Secondary.copy(alpha=.25f)))).clickable(enabled = enabled, role = Role.Button, onClick = onClick).padding(horizontal = 18.dp, vertical = 16.dp)) {
+    Box(Modifier.fillMaxWidth().heightIn(min = 56.dp).clip(RoundedCornerShape(6.dp)).background(if (enabled) Ink else Secondary.copy(alpha=.35f)).clickable(enabled = enabled, role = Role.Button, onClick = onClick).padding(horizontal = 18.dp, vertical = 16.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { if (icon != null) { KmSymbol(icon, Modifier.size(22.dp), Color.White); Spacer(Modifier.width(10.dp)) }; Text(label, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.weight(1f)); Text("›", color = Color.White, fontSize = 22.sp) }
     }
 }
