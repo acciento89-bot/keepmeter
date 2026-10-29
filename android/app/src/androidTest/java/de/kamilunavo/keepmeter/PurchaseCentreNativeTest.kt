@@ -62,6 +62,7 @@ class PurchaseCentreNativeTest {
         val scenario = ActivityScenario.launch<MainActivity>(intent)
         try {
             waitText("Kopfhörer")
+            compose.onNodeWithContentDescription("Kauf hinzufügen").assertHasClickAction()
             assertEquals("2", dbText("PRAGMA user_version"))
             assertEquals("2", dbText("SELECT COUNT(*) FROM purchases"))
             assertEquals("other", dbText("SELECT category FROM purchases WHERE id='legacy-0'"))

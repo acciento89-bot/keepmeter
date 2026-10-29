@@ -47,6 +47,8 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -528,7 +530,7 @@ private fun GradientButton(label: String, icon: KmIcon? = null, enabled: Boolean
 @Composable
 private fun BrandCircleAction(icon: KmIcon, label: String, onClick: () -> Unit) {
     Box(
-        Modifier.size(46.dp).background(Color.White.copy(alpha = .18f), CircleShape).border(1.dp, Color.White.copy(alpha = .28f), CircleShape).clickable(role = Role.Button, onClick = onClick),
+        Modifier.size(46.dp).background(Color.White.copy(alpha = .18f), CircleShape).border(1.dp, Color.White.copy(alpha = .28f), CircleShape).semantics { contentDescription = label }.clickable(role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) { KmSymbol(icon, Modifier.size(22.dp), Color.White) }
 }
