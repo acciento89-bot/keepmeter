@@ -2,6 +2,7 @@ package de.kamilunavo.keepmeter
 
 import android.Manifest
 import android.app.Activity
+import androidx.core.view.WindowCompat
 import android.content.Context
 import android.os.Build
 import android.graphics.BitmapFactory
@@ -122,6 +123,10 @@ internal fun KeepMeterRoot(
         Copy(forceGerman || configuration.locales[0]?.language == "de")
     }
     MaterialTheme(colorScheme = KmColors, typography = brandedTypography(KmTypography)) {
+        SideEffect {
+            // Paper onboarding needs dark status icons; signed-in headers retain their dark surface.
+            WindowCompat.getInsetsController(activity.window, activity.window.decorView).isAppearanceLightStatusBars = !onboardingDone
+        }
         Box(Modifier.fillMaxSize().background(if (onboardingDone) Ink else Page)) {
             if (!onboardingDone) Onboarding(copy) { prefs.edit().putBoolean("onboarding_done", true).apply(); onboardingDone = true }
             else MainExperience(activity, vm, billing, copy) { prefs.edit().putBoolean("onboarding_done", false).apply(); onboardingDone = false }
