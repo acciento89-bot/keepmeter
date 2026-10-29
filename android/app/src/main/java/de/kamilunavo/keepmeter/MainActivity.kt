@@ -27,7 +27,7 @@ class MainActivity : ComponentActivity() {
                 .apply()
         }
 
-        // KeepMeter's top surface is the blue brand gradient: use light status icons.
+        // Compose keeps status icons matched to paper onboarding or the dark main header.
         // The bottom navigation is light: use dark navigation icons. Content handles
         // safe drawing insets inside Compose so carrier/time/battery never overlap UI.
         enableEdgeToEdge(
