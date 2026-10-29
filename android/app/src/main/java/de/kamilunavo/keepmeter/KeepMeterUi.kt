@@ -70,9 +70,9 @@ import kotlin.math.min
 
 private val Blue = Color(0xFF316BF5)
 private val BlueSoft = Color(0xFF64A1FF)
-private val Success = Color(0xFF22A86E)
-private val Warning = Color(0xFFF2931F)
-private val Danger = Color(0xFFEB454F)
+private val Success = Color(0xFF19734E)
+private val Warning = Color(0xFF945217)
+private val Danger = Color(0xFFB62C39)
 private val Page = Color(0xFFF5F2E9)
 private val Surface = Color(0xFFFFFFFF)
 private val Ink = Color(0xFF151923)
