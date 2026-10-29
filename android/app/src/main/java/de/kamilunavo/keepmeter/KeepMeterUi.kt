@@ -76,7 +76,7 @@ private val Danger = Color(0xFFB62C39)
 private val Page = Color(0xFFF5F2E9)
 private val Surface = Color(0xFFFFFFFF)
 private val Ink = Color(0xFF151923)
-private val Secondary = Color(0xFF6C7483)
+private val Secondary = Color(0xFF58616B)
 private val Hairline = Color(0xFFD9D4C7)
 private val BrandGradient = Brush.linearGradient(
     colors = listOf(Color(0xFF1F53CC), Blue, Color(0xFF68A5FF)),
@@ -122,7 +122,7 @@ internal fun KeepMeterRoot(
         Copy(forceGerman || configuration.locales[0]?.language == "de")
     }
     MaterialTheme(colorScheme = KmColors, typography = brandedTypography(KmTypography)) {
-        Box(Modifier.fillMaxSize().background(Ink)) {
+        Box(Modifier.fillMaxSize().background(if (onboardingDone) Ink else Page)) {
             if (!onboardingDone) Onboarding(copy) { prefs.edit().putBoolean("onboarding_done", true).apply(); onboardingDone = true }
             else MainExperience(activity, vm, billing, copy) { prefs.edit().putBoolean("onboarding_done", false).apply(); onboardingDone = false }
         }
@@ -132,6 +132,8 @@ internal fun KeepMeterRoot(
 @Composable
 private fun Onboarding(copy: Copy, onDone: () -> Unit) {
     var page by rememberSaveable { mutableIntStateOf(0) }
+    val contentScroll = rememberScrollState()
+    LaunchedEffect(page) { contentScroll.scrollTo(0) }
     val pages = listOf(
         Triple(KmIcon.BAG, copy.t("Bewusster behalten", "Buy less blindly"), copy.t("Füge einen Kauf hinzu und behalte die Rückgabefrist sichtbar, statt ihn in einer Schublade zu vergessen.", "Add a purchase and keep its return deadline visible instead of forgetting it in a drawer.")),
         Triple(KmIcon.TAP, copy.t("Echte Nutzung tracken", "Track real use"), copy.t("Tippe einmal, wenn du einen Artikel nutzt. KeepMeter berechnet daraus Nutzungen und Kosten pro Nutzung.", "Tap once whenever you use an item. KeepMeter turns that into usage count and cost per use.")),
@@ -139,16 +141,25 @@ private fun Onboarding(copy: Copy, onDone: () -> Unit) {
     )
     Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).padding(24.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            BrandMark(); Text("KeepMeter", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(start = 9.dp)); Spacer(Modifier.weight(1f))
+            BrandMark(); Text("KeepMeter", color = Ink, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(start = 9.dp)); Spacer(Modifier.weight(1f))
             if (page < 2) TextButton(onClick = onDone) { Text(copy.t("Überspringen", "Skip"), color = Secondary, fontWeight = FontWeight.SemiBold) }
         }
-        Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            KmCard(Modifier.fillMaxWidth().heightIn(min = 250.dp), 38.dp) {
-                Box(Modifier.fillMaxWidth().height(250.dp), contentAlignment = Alignment.Center) {
-                    Box(Modifier.size(158.dp).background(iconTint(page).copy(alpha = .11f), CircleShape).border(1.dp, iconTint(page).copy(alpha = .15f), CircleShape), contentAlignment = Alignment.Center) { KmSymbol(pages[page].first, Modifier.size(66.dp), iconTint(page)) }
+        Column(Modifier.weight(1f).verticalScroll(contentScroll), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            KmCard(Modifier.fillMaxWidth(), 4.dp) {
+                Column(Modifier.padding(22.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text(copy.t("KAUF · NUTZUNG · ENTSCHEIDUNG", "PURCHASE · USE · DECISION"), Modifier.weight(1f), style = MaterialTheme.typography.labelMedium, color = Secondary)
+                        Text("${page + 1} / ${pages.size}", Modifier.padding(start = 12.dp), color = Ink, fontWeight = FontWeight.Bold)
+                    }
+                    HorizontalDivider(color = Hairline)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+                        KmSymbol(pages[page].first, Modifier.size(56.dp), Ink)
+                        Text(when (page) { 0 -> copy.t("Kauf notieren", "Record a purchase"); 1 -> copy.t("Nutzung zählen", "Count real use"); else -> copy.t("Fristgerecht entscheiden", "Decide before the deadline") }, Modifier.weight(1f), style = MaterialTheme.typography.titleLarge, color = Ink)
+                    }
+                    HorizontalDivider(color = Hairline)
                 }
             }
-            Spacer(Modifier.height(26.dp)); Text(pages[page].second, style = MaterialTheme.typography.displaySmall, textAlign = TextAlign.Center)
+            Spacer(Modifier.height(26.dp)); Text(pages[page].second, color = Ink, style = MaterialTheme.typography.displaySmall, textAlign = TextAlign.Center)
             Text(pages[page].third, style = MaterialTheme.typography.bodyLarge, color = Secondary, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 12.dp).widthIn(max = 360.dp))
         }
         Row(Modifier.align(Alignment.CenterHorizontally).padding(bottom = 22.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) { repeat(3) { i -> Box(Modifier.width(if (i == page) 30.dp else 8.dp).height(8.dp).background(if (i == page) Blue else Secondary.copy(alpha = .2f), CircleShape)) } }
@@ -503,8 +514,9 @@ private fun BrandMark() { Box(Modifier.size(32.dp).background(Blue, RoundedCorne
 
 @Composable
 private fun GradientButton(label: String, icon: KmIcon? = null, enabled: Boolean = true, onClick: () -> Unit) {
-    Box(Modifier.fillMaxWidth().heightIn(min = 56.dp).clip(RoundedCornerShape(6.dp)).background(if (enabled) Ink else Secondary.copy(alpha=.35f)).clickable(enabled = enabled, role = Role.Button, onClick = onClick).padding(horizontal = 18.dp, vertical = 16.dp)) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { if (icon != null) { KmSymbol(icon, Modifier.size(22.dp), Color.White); Spacer(Modifier.width(10.dp)) }; Text(label, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.weight(1f)); Text("›", color = Color.White, fontSize = 22.sp) }
+    val foreground = if (enabled) Color.White else Ink
+    Box(Modifier.fillMaxWidth().heightIn(min = 56.dp).clip(RoundedCornerShape(6.dp)).background(if (enabled) Ink else Hairline).clickable(enabled = enabled, role = Role.Button, onClick = onClick).padding(horizontal = 18.dp, vertical = 16.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { if (icon != null) { KmSymbol(icon, Modifier.size(22.dp), foreground); Spacer(Modifier.width(10.dp)) }; Text(label, color = foreground, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.weight(1f)); Text("›", color = foreground, fontSize = 22.sp) }
     }
 }
 
